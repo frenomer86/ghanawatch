@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, type ComponentType, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Menu } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -7,11 +8,9 @@ import { cn } from "@/lib/utils";
 import { Wordmark } from "./wordmark";
 import { LanguageSwitcher } from "./language-switcher";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 /** The map stays one click away; everything else sits in three drop-down menus. */
-const GROUPS = [
+export const GROUPS = [
   {
     key: "groupWatch",
     items: [
@@ -41,6 +40,51 @@ const GROUPS = [
     ],
   },
 ] as const;
+export type NavGroup = (typeof GROUPS)[number];
+
+export const GROUP_TRIGGER_CLASS =
+  "inline-flex items-center gap-1 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent";
+export const MENU_BUTTON_CLASS = "md:hidden";
+
+type Menus = typeof import("./top-bar-menus");
+let menus: Promise<Menus> | null = null;
+/** The menu code (Radix drop-down and dialog), fetched once, on the first hover, focus or press of a menu. */
+const loadMenus = () => (menus ??= import("./top-bar-menus").catch((e: unknown) => ((menus = null), Promise.reject(e))));
+
+/**
+ * A menu button that is a plain button until the visitor reaches for it: hovering or focusing it fetches
+ * the menu code, pressing it (click, Enter, Space or Arrow Down) swaps in the real menu, already open, with
+ * focus inside it. Closing the menu returns focus to its trigger as usual.
+ */
+function LazyMenu({ render, placeholder }: { render: (m: Menus) => ComponentType; placeholder: (handlers: { onPointerEnter: () => void; onFocus: () => void; onClick: () => void; onKeyDown: (e: KeyboardEvent) => void }) => React.ReactNode }) {
+  const [Real, setReal] = useState<ComponentType | null>(null);
+  const [wanted, setWanted] = useState(false);
+  useEffect(() => {
+    if (!wanted) return;
+    let live = true;
+    loadMenus().then(
+      // Keep the first menu made: a new component type would remount it and close it.
+      (m) => live && setReal((current: ComponentType | null) => current ?? render(m)),
+      () => live && setWanted(false),
+    );
+    return () => {
+      live = false;
+    };
+  }, [wanted, render]);
+  if (Real) return <Real />;
+  const preload = () => void loadMenus().catch(() => undefined);
+  return placeholder({
+    onPointerEnter: preload,
+    onFocus: preload,
+    onClick: () => setWanted(true),
+    onKeyDown: (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setWanted(true);
+      }
+    },
+  });
+}
 
 export function isActive(pathname: string, href: string) {
   if (href === "/data") return pathname === "/data" || (pathname.startsWith("/data/") && !pathname.startsWith("/data/sources"));
@@ -67,64 +111,32 @@ export function TopBar({ className }: { className?: string }) {
           {GROUPS.map((g) => {
             const active = g.items.some((i) => isActive(pathname, i.href));
             return (
-              <DropdownMenu key={g.key}>
-                <DropdownMenuTrigger
-                  className={cn(
-                    "inline-flex items-center gap-1 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent",
-                    active && "bg-forest-50 font-medium text-forest-900 dark:bg-secondary dark:text-foreground",
-                  )}
-                >
-                  {t(g.key)}
-                  <ChevronDown className="size-3.5 opacity-60" aria-hidden />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-48">
-                  {g.items.map((i) => (
-                    <DropdownMenuItem key={i.key} asChild>
-                      <Link href={i.href} aria-current={isActive(pathname, i.href) ? "page" : undefined} className={cn("cursor-pointer text-sm", isActive(pathname, i.href) && "font-medium text-forest-900")}>
-                        {t(i.key)}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LazyMenu
+                key={g.key}
+                render={(m) => {
+                  const Group = () => <m.GroupDropdown group={g} />;
+                  return Group;
+                }}
+                placeholder={(h) => (
+                  <button type="button" aria-haspopup="menu" aria-expanded={false} className={cn(GROUP_TRIGGER_CLASS, active && "bg-forest-50 font-medium text-forest-900 dark:bg-secondary dark:text-foreground")} {...h}>
+                    {t(g.key)}
+                    <ChevronDown className="size-3.5 opacity-60" aria-hidden />
+                  </button>
+                )}
+              />
             );
           })}
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <LanguageSwitcher />
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("menu")}>
+          <LazyMenu
+            render={(m) => m.PhoneMenu}
+            placeholder={(h) => (
+              <Button variant="ghost" size="icon" className={MENU_BUTTON_CLASS} aria-label={t("menu")} aria-haspopup="dialog" aria-expanded={false} {...h}>
                 <Menu className="size-5" />
               </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <SheetHeader>
-                <SheetTitle>
-                  <Wordmark />
-                </SheetTitle>
-              </SheetHeader>
-              <nav aria-label="More" className="mt-2 flex flex-col gap-1 px-2">
-                <Link href="/map" className={cn("rounded-md px-3 py-2.5 text-base hover:bg-accent", isActive(pathname, "/map") && "bg-forest-50 font-medium text-forest-900")}>
-                  {t("map")}
-                </Link>
-                {GROUPS.map((g) => (
-                  <div key={g.key} className="mt-3">
-                    <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t(g.key)}</p>
-                    {g.items.map((item) => (
-                      <Link
-                        key={item.key}
-                        href={item.href}
-                        className={cn("block rounded-md px-3 py-2.5 text-base hover:bg-accent", isActive(pathname, item.href) && "bg-forest-50 font-medium text-forest-900")}
-                      >
-                        {t(item.key)}
-                      </Link>
-                    ))}
-                  </div>
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
+            )}
+          />
         </div>
       </div>
     </header>
