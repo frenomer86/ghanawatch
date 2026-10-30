@@ -1,0 +1,2 @@
+ALTER TABLE "context_features" DROP CONSTRAINT "context_features_kind_ck";--> statement-breakpoint
+ALTER TABLE "context_features" ADD CONSTRAINT "context_features_kind_ck" CHECK (kind in ('school', 'cemetery', 'health', 'worship', 'settlement', 'residential', 'farm', 'protected_area', 'mine', 'waterway', 'wetland'));

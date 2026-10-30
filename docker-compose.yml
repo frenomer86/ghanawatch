@@ -1,0 +1,126 @@
+# GhanaWatch on a single VPS (e.g. Hostinger KVM 2, Ubuntu 24.04 + Docker).
+#
+#   cp .env.production.example .env.production   # fill in secrets and domain
+#   docker compose up -d --build                  # first start
+#   docker compose run --rm pipeline npm run setup   # migrations, boundaries, admin
+#
+# Services: db (PostGIS), web (Next.js), pipeline (live data every 3 hours), scheduler (monthly release, weekly digest), caddy (HTTPS).
+name: ghanawatch
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ghanawatch
+      POSTGRES_USER: ghanawatch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      # Password of the limited account the website uses (created once by deploy/db-init).
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env.production}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghanawatch -d ghanawatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Not published to the internet; only the app containers on the private network can reach it.
+    security_opt:
+      - no-new-privileges:true
+    networks: [internal]
+
+  web:
+    build: .
+    image: ghanawatch:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks: [internal, edge]
+    env_file: .env.production
+    environment:
+      # The website uses the limited account: rows only, no schema changes.
+      DATABASE_URL: postgres://ghanawatch_app:${APP_DB_PASSWORD}@db:5432/ghanawatch
+      DB_POOL_MAX: "10"
+    volumes:
+      - uploads:/app/.data
+      # Release files and weekly digests are written by the scheduler and served by the website.
+      - releases:/app/public/releases
+      - alerts:/app/public/alerts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pipeline:
+    image: ghanawatch:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Needs the internet for satellite and fire data, and the database.
+    networks: [internal, edge]
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgres://ghanawatch:${POSTGRES_PASSWORD}@db:5432/ghanawatch
+      DB_POOL_MAX: "3"
+      # The detection rule measured on 18 Oct 2026 (one clear pass, method s2-galamsey-2.3).
+      S2_MIN_AFTER_OBS: "1"
+    command: ["npm", "run", "pipeline", "--", "--every=180"]
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  scheduler:
+    image: ghanawatch:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # The monthly release (first Monday, 06:00 GMT, dry run the Wednesday before) and the weekly digest (Mondays, 07:00 GMT).
+    # Needs the internet for the sample's imagery, Zenodo and Brevo, and writes public/releases on the shared volume.
+    networks: [internal, edge]
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgres://ghanawatch:${POSTGRES_PASSWORD}@db:5432/ghanawatch
+      DB_POOL_MAX: "2"
+    command: ["npm", "run", "scheduler"]
+    volumes:
+      - uploads:/app/.data
+      - releases:/app/public/releases
+      - alerts:/app/public/alerts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks: [edge]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.production}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+networks:
+  # The database sits only on this network, which has no route to the internet; only Caddy publishes ports.
+  internal:
+    internal: true
+  edge: {}
+
+volumes:
+  pgdata:
+  uploads:
+  releases:
+  alerts:
+  caddy_data:
+  caddy_config:
