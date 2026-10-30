@@ -118,7 +118,7 @@ export async function tagWaterways(db: Db): Promise<number> {
     select id::text, centroid_lon::float lon, centroid_lat::float lat, coalesce(area_ha, 0)::float ha, properties ? 'waterway' had, properties->>'signature' sig
     from change_events
     where method_version like 's2-galamsey-%' and type = 'surface_disturbance' and status <> 'dismissed'
-      and properties->>'signature' in ('cleared', 'new_pits', 'cleared_with_pits')`));
+      and properties->>'signature' in ('cleared', 'new_pits', 'cleared_with_pits', 'mining')`));
   // New water in a wetland or lagoon is the season (salt pans, fish ponds, high water), not landfill; and new
   // ponds without clearing are not structures. Only cleared or dug ground counts, and in wetlands only clearing.
   const tags: Array<{ id: string; tag: WaterwayTag }> = [];

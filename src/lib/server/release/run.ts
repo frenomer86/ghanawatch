@@ -133,7 +133,7 @@ export async function runRelease(opts: ReleaseOptions): Promise<ReleaseResult> {
     month,
     label: d.label,
     indexVersion: INDEX_VERSION,
-    detectionMethod: "s2-galamsey-2.3 + s1-water-1.0",
+    detectionMethod: process.env.GW_DETECTOR === "legacy" ? "s2-galamsey-2.3 + s1-water-1.0" : "s2-galamsey-3.0 (monthly multi-sensor record)",
     generatedAt: new Date().toISOString(),
     gitCommit: gitCommit(),
     headline: press.headline,
@@ -201,7 +201,7 @@ export async function ensureSample(month: string, log: (s: string) => void) {
         select id::text from change_events
         where status <> 'dismissed' and confidence in ('medium', 'high') and properties->'placement'->>'mine' is null and not (properties ? 'licensedMine')
           and to_char(coalesce(first_image_date, image_date), 'YYYY-MM') = ${month}
-          and ((method_version like 's2-galamsey-%' and properties->>'signature' in ('new_pits', 'cleared_with_pits')) or method_version like 's1-water-%')
+          and ((method_version like 's2-galamsey-%' and properties->>'signature' in ('new_pits', 'cleared_with_pits', 'mining')) or method_version like 's1-water-%')
         order by md5(id::text || ${month}) limit ${SAMPLE_SIZE}`),
     );
     if (picks.length) await db.insert(confirmationSamples).values(picks.map((p) => ({ id: uuidv7(), month, changeEventId: p.id })));

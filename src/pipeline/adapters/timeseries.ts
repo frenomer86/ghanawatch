@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { sql } from "drizzle-orm";
 import type { Polygon } from "geojson";
-import { analysisCells, historyEvents } from "@/lib/db/schema";
+import { analysisCells, historyEvents, historyProgress } from "@/lib/db/schema";
 import { areaHectares, bboxOf, centroidOf } from "@/lib/geo";
 import { stableId } from "@/lib/server/ids";
 import { monthOf, previousMonth } from "@/lib/domain/index";
@@ -325,6 +325,12 @@ export async function writeHistory(db: Db, r: CellMonthResult, districts: Distri
   for (let i = 0; i < rows.length; i += 200) {
     await db.insert(historyEvents).values(rows.slice(i, i + 200)).onConflictDoNothing();
   }
+  // Progress per cell and month (the home page's scan meter and the backfill's resume report read it).
+  const cover = Math.round((r.coverage.sentinel2 + r.coverage.landsat) * 100);
+  await db
+    .insert(historyProgress)
+    .values({ cellId: r.cell.id, scanMonth: r.month, status: "ok", sites: r.sites.length, coverageAfter: cover, note: `gw-ts: optical ${cover}%, radar only ${Math.round(r.coverage.radar * 100)}%` })
+    .onConflictDoUpdate({ target: [historyProgress.cellId, historyProgress.scanMonth], set: { status: sql`excluded.status`, sites: sql`excluded.sites`, coverageAfter: sql`excluded.coverage_after`, note: sql`excluded.note`, scannedAt: sql`now()` } });
 }
 
 /** Detections of this method in the cell that the latest month no longer shows are hidden (not deleted). */

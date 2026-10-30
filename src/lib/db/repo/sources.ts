@@ -151,8 +151,14 @@ export async function nationalScanStatus(): Promise<ScanStatus> {
   const cells = toRows<{ region: string | null; cells: number; scanned: number; sites: number; last: string | null }>(
     await db.execute(sql`
       select c.region_name as region, count(*)::int as cells,
-        count(c.last_run_at)::int as scanned, coalesce(sum(s.n), 0)::int as sites, max(c.last_run_at)::text as last
+        -- A cell counts as scanned once the monthly record (detector 3.0) is current for it, or, before that
+        -- detector has run anywhere, once the two-date scan has visited it.
+        (case when exists (select 1 from history_progress where note like 'gw-ts%')
+          then count(*) filter (where t.month is not null and t.month >= to_char(now() - interval '2 months', 'YYYY-MM'))
+          else count(c.last_run_at) end)::int as scanned,
+        coalesce(sum(s.n), 0)::int as sites, greatest(max(c.last_run_at), max(t.at))::text as last
       from analysis_cells c
+      left join (select cell_id, max(scan_month) as month, max(scanned_at) as at from history_progress where note like 'gw-ts%' group by 1) t on t.cell_id = c.id
       left join (
         -- Only what the map shows: detections that passed the checks.
         select properties->>'cell' as cell, count(*)::int as n from change_events
@@ -164,7 +170,7 @@ export async function nationalScanStatus(): Promise<ScanStatus> {
   const [ev] = toRows<{ n: number; pits: number; sensitive: number }>(
     await db.execute(sql`
       select count(*)::int as n,
-        count(*) filter (where properties->>'signature' in ('new_pits', 'cleared_with_pits'))::int as pits,
+        count(*) filter (where properties->>'signature' in ('new_pits', 'cleared_with_pits', 'mining'))::int as pits,
         count(*) filter (where jsonb_array_length(coalesce(properties->'placement'->'flags', '[]'::jsonb)) > 0
           and (properties->'placement'->>'inResidential' = 'true' or properties->'placement'->>'protectedArea' is not null
             or exists (select 1 from jsonb_array_elements(properties->'placement'->'nearby') x
