@@ -58,9 +58,17 @@ CC BY-SA 4.0): 4,270 hand-mapped 128 × 128 patches at 10 m over five districts 
 2016 and January 2022, with the authors' 70/30 train/test split. Two kinds of input share its masks:
 (A) its own patches, and (B) GhanaWatch's own January 2022 composites at the same footprints, built by the
 production code (`npm run detector:cube`), so the model learns the inputs it will see. A parity check
-(`parity_check.py`) found SmallMinesDS's visible bands noticeably hazier than GhanaWatch's (it composites
-differently), which is why (B) exists. Radar in the 2022 patches is linear power and in 2016 dB; both are
+(`parity_check.py`) on January 2022 patches found the two agree closely (correlation 0.94–0.98 in red, NIR
+and SWIR; 0.78–0.92 in blue and green, where compositing differs most) and fixed SmallMinesDS's scale:
+reflectance = (DN − 1000) / 10000. Radar in the 2022 patches is linear power and in 2016 dB; both are
 converted to dB.
+
+**A bug found on the way (fixed in 2.x and 3.0).** Since processing baseline 04.00 (25 January 2022) Earth
+Search serves Sentinel-2 L2A with ESA's +1000 already removed (`earthsearch:boa_offset_applied: true`) but
+still advertises an offset of −0.1. GhanaWatch applied it, so every Sentinel-2 reflectance from 2022 on was
+read 0.1 too low (over half of the blue band negative). Both detectors now apply the offset only when the
+flag is false (`ts/catalog.ts` `s2Offset`, `s2/stac.ts`); a unit test covers it. The 2.x thresholds were
+tuned on the biased values, so the muddy-river check should be re-verified on its next accuracy sample.
 
 **Robustness to what a month offers.** Training hides channel groups the way months do: Landsat only (no red
 edge, NIR from B8A), radar only, random cloud holes inside a patch; and 20% of batches are averaged to 20 m.
