@@ -1,0 +1,12 @@
+node_modules
+.next
+.data
+.data-*
+.env
+.env.local
+.env.production
+test-results
+playwright-report
+.git
+.claude
+docs/preview

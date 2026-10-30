@@ -1,0 +1,421 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------
+   GhanaWatch design tokens
+   Three layers: primitives (--gw-*) → semantic (shadcn names) → component.
+   Palette is drawn from the Ghanaian landscape the platform watches:
+   forest canopy, river water, laterite earth, and paper-light surfaces so
+   that colour on the map is reserved for change.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* primitives */
+  --gw-forest-950: #06201a;
+  --gw-forest-900: #0b2e23;
+  --gw-forest-700: #0f3d2e;
+  --gw-forest-500: #1f6f50;
+  --gw-forest-300: #7fb79b;
+  --gw-forest-100: #dcebe3;
+  --gw-forest-50: #eef5f1;
+  --gw-river-700: #245a82;
+  --gw-river-600: #2f6f9f;
+  --gw-river-100: #dce9f3;
+  --gw-laterite-700: #8a4221;
+  --gw-laterite-600: #a8512a;
+  --gw-laterite-100: #f3e3da;
+  --gw-ink: #15201b;
+  --gw-ink-soft: #3f4c46;
+  --gw-muted: #5c6a63;
+  --gw-paper: #f5f7f4;
+  --gw-paper-deep: #e9eee9;
+  --gw-surface: #ffffff;
+  --gw-line: #d9e0db;
+  --gw-line-strong: #b9c4bd;
+
+  /* severity: text (dark, ≥4.5:1 on white), fill (map marker), tint (chip background) */
+  --sev-normal-text: #22663f;
+  --sev-normal-fill: #2e8b57;
+  --sev-normal-tint: #e4f2ea;
+  --sev-watch-text: #7a5300;
+  --sev-watch-fill: #e2a92b;
+  --sev-watch-tint: #fbf0d6;
+  --sev-elevated-text: #8f3f0c;
+  --sev-elevated-fill: #e4731f;
+  --sev-elevated-tint: #fbe6d6;
+  --sev-urgent-text: #9b1c1c;
+  --sev-urgent-fill: #d13b3b;
+  --sev-urgent-tint: #fbe0e0;
+
+  /* semantic (shadcn contract) */
+  --background: var(--gw-paper);
+  --foreground: var(--gw-ink);
+  --card: var(--gw-surface);
+  --card-foreground: var(--gw-ink);
+  --popover: var(--gw-surface);
+  --popover-foreground: var(--gw-ink);
+  --primary: var(--gw-forest-700);
+  --primary-foreground: #ffffff;
+  --secondary: var(--gw-forest-50);
+  --secondary-foreground: var(--gw-forest-900);
+  --muted: var(--gw-paper-deep);
+  --muted-foreground: var(--gw-muted);
+  --accent: var(--gw-forest-100);
+  --accent-foreground: var(--gw-forest-900);
+  --destructive: var(--sev-urgent-text);
+  --border: var(--gw-line);
+  --input: var(--gw-line-strong);
+  --ring: var(--gw-forest-500);
+  --link: var(--gw-river-700);
+  --chart-1: var(--gw-forest-500);
+  --chart-2: var(--gw-river-600);
+  --chart-3: var(--gw-laterite-600);
+  --chart-4: var(--sev-watch-fill);
+  --chart-5: var(--gw-forest-300);
+  --radius: 0.375rem;
+  --sidebar: var(--gw-surface);
+  --sidebar-foreground: var(--gw-ink);
+  --sidebar-primary: var(--gw-forest-700);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--gw-forest-50);
+  --sidebar-accent-foreground: var(--gw-forest-900);
+  --sidebar-border: var(--gw-line);
+  --sidebar-ring: var(--gw-forest-500);
+
+  /* layout */
+  --gw-topbar-h: 3.5rem;
+  --gw-bottomnav-h: 3.75rem;
+  --gw-rail-w: 24rem;
+  --gw-measure: 68ch;
+}
+
+.dark {
+  --gw-paper: #0e1512;
+  --gw-paper-deep: #141d19;
+  --gw-surface: #17221d;
+  --gw-line: #26332d;
+  --gw-line-strong: #36453e;
+  --gw-ink: #e7ece9;
+  --gw-ink-soft: #c3ccc7;
+  --gw-muted: #9aa8a1;
+  --sev-normal-text: #8fd3ab;
+  --sev-watch-text: #f0c35d;
+  --sev-elevated-text: #f29a5a;
+  --sev-urgent-text: #f08080;
+  --sev-normal-tint: #163424;
+  --sev-watch-tint: #3a2d0c;
+  --sev-elevated-tint: #3d2210;
+  --sev-urgent-tint: #3d1616;
+
+  --background: var(--gw-paper);
+  --foreground: var(--gw-ink);
+  --card: var(--gw-surface);
+  --card-foreground: var(--gw-ink);
+  --popover: var(--gw-surface);
+  --popover-foreground: var(--gw-ink);
+  --primary: var(--gw-forest-300);
+  --primary-foreground: var(--gw-forest-950);
+  --secondary: #1b2a23;
+  --secondary-foreground: var(--gw-ink);
+  --muted: var(--gw-paper-deep);
+  --muted-foreground: var(--gw-muted);
+  --accent: #1b2a23;
+  --accent-foreground: var(--gw-ink);
+  --destructive: var(--sev-urgent-text);
+  --border: var(--gw-line);
+  --input: var(--gw-line-strong);
+  --ring: var(--gw-forest-300);
+  --link: #8fb8dc;
+  --sidebar: var(--gw-surface);
+  --sidebar-foreground: var(--gw-ink);
+  --sidebar-primary: var(--gw-forest-300);
+  --sidebar-primary-foreground: var(--gw-forest-950);
+  --sidebar-accent: #1b2a23;
+  --sidebar-accent-foreground: var(--gw-ink);
+  --sidebar-border: var(--gw-line);
+  --sidebar-ring: var(--gw-forest-300);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body), "Source Sans 3", "Noto Sans", system-ui, sans-serif;
+  --font-heading: var(--font-heading), "Lexend", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-link: var(--link);
+  --color-forest-950: var(--gw-forest-950);
+  --color-forest-900: var(--gw-forest-900);
+  --color-forest-700: var(--gw-forest-700);
+  --color-forest-500: var(--gw-forest-500);
+  --color-forest-300: var(--gw-forest-300);
+  --color-forest-100: var(--gw-forest-100);
+  --color-forest-50: var(--gw-forest-50);
+  --color-river-700: var(--gw-river-700);
+  --color-river-600: var(--gw-river-600);
+  --color-river-100: var(--gw-river-100);
+  --color-laterite-700: var(--gw-laterite-700);
+  --color-laterite-600: var(--gw-laterite-600);
+  --color-laterite-100: var(--gw-laterite-100);
+  --color-ink-soft: var(--gw-ink-soft);
+  --color-paper-deep: var(--gw-paper-deep);
+  --color-sev-normal: var(--sev-normal-text);
+  --color-sev-normal-fill: var(--sev-normal-fill);
+  --color-sev-normal-tint: var(--sev-normal-tint);
+  --color-sev-watch: var(--sev-watch-text);
+  --color-sev-watch-fill: var(--sev-watch-fill);
+  --color-sev-watch-tint: var(--sev-watch-tint);
+  --color-sev-elevated: var(--sev-elevated-text);
+  --color-sev-elevated-fill: var(--sev-elevated-fill);
+  --color-sev-elevated-tint: var(--sev-elevated-tint);
+  --color-sev-urgent: var(--sev-urgent-text);
+  --color-sev-urgent-fill: var(--sev-urgent-fill);
+  --color-sev-urgent-tint: var(--sev-urgent-tint);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --spacing-topbar: var(--gw-topbar-h);
+  --spacing-bottomnav: var(--gw-bottomnav-h);
+  --spacing-rail: var(--gw-rail-w);
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6rem;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.7rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.8rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.1rem;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-4xl: 2.875rem;
+  --text-4xl--line-height: 3.1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "tnum" 1, "kern" 1;
+    text-rendering: optimizeLegibility;
+    overflow-wrap: anywhere;
+  }
+  h1, h2, h3, h4, .font-heading {
+    font-family: var(--font-heading), "Lexend", system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  a {
+    text-underline-offset: 0.15em;
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* long-form content measure */
+  .prose-gw {
+    max-width: var(--gw-measure);
+  }
+  .prose-gw p, .prose-gw li {
+    @apply text-base text-foreground/90;
+  }
+  .prose-gw h2 {
+    @apply mt-10 mb-3 text-2xl font-semibold;
+  }
+  .prose-gw h3 {
+    @apply mt-7 mb-2 text-xl font-medium;
+  }
+  .prose-gw a {
+    @apply text-link underline;
+  }
+  .prose-gw table {
+    @apply w-full text-sm my-4;
+  }
+  .prose-gw th {
+    @apply text-left font-semibold py-2 border-b border-border;
+  }
+  .prose-gw td {
+    @apply py-2 border-b border-border align-top;
+  }
+  .prose-gw th:not(:last-child), .prose-gw td:not(:last-child) {
+    @apply pr-4;
+  }
+  /* Reference tables wider than the reading measure (methods page). */
+  .gw-table {
+    @apply my-4 w-full min-w-[56rem] text-sm;
+  }
+  .gw-table th {
+    @apply border-b border-border py-2 pr-4 text-left align-bottom font-semibold;
+  }
+  .gw-table td {
+    @apply border-b border-border py-2 pr-4 align-top text-foreground/90;
+  }
+  .gw-table td:first-child {
+    @apply min-w-36 font-medium text-foreground;
+  }
+  .gw-table td:nth-child(3) {
+    @apply min-w-36;
+  }
+  .gw-table td:nth-child(4), .gw-table td:last-child {
+    @apply min-w-28;
+  }
+  .gw-table th:last-child, .gw-table td:last-child {
+    @apply pr-0;
+  }
+
+  /* The two-date stamp that appears on every detection. */
+  .datestamp {
+    @apply inline-flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground tabular-nums;
+  }
+  .datestamp strong {
+    @apply font-medium text-foreground;
+  }
+
+  /* Skip link */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[1000] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground;
+  }
+}
+
+/* MapLibre control restyle so controls match the interface */
+.maplibregl-ctrl-group {
+  border-radius: var(--radius) !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 0 0 1px var(--border) !important;
+  background: var(--card) !important;
+}
+.maplibregl-ctrl-group button {
+  width: 40px !important;
+  height: 40px !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border) !important;
+}
+.maplibregl-ctrl-attrib {
+  font-size: 11px !important;
+  background: color-mix(in srgb, var(--card) 85%, transparent) !important;
+  color: var(--muted-foreground) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--link) !important;
+}
+.maplibregl-popup-content {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.14), 0 0 0 1px var(--border) !important;
+  padding: 0.75rem !important;
+}
+
+/* Phones: keep the national map's controls clear of its floating search and time window. */
+@media (max-width: 639px) {
+  .gw-national-map .maplibregl-ctrl-top-right {
+    top: 13rem !important;
+  }
+}
+
+/* Ground view: the spot marker, a dot with a slow pulse (still for reduced motion). */
+.gw-spot {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+.gw-spot-dot {
+  position: absolute;
+  inset: 8px;
+  border-radius: 9999px;
+  background: #ffd400;
+  box-shadow: 0 0 0 2px #fff, 0 1px 6px rgb(0 0 0 / 0.6);
+}
+.gw-spot-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid #ffd400;
+  animation: gw-spot-pulse 2.2s ease-out infinite;
+}
+@keyframes gw-spot-pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-spot-pulse {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Ground view on phones: the page is already full width, so drop the full-screen button. */
+@media (max-width: 639px) {
+  .gw-explore .maplibregl-ctrl-group:has(.maplibregl-ctrl-fullscreen) {
+    display: none;
+  }
+}

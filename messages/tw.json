@@ -1,0 +1,149 @@
+{
+  "_comment": "Akan (Twi) draft. Machine-drafted; every string needs review by a native speaker before public launch. Keys that are missing fall back to English.",
+  "app": {
+    "name": "GhanaWatch",
+    "tagline": "Nsakraeɛ a ɛreba Ghana asase so, a wɔhunu firi soro na wɔkyɛ ma obiara",
+    "skipToContent": "Kɔ nsɛm no mu tẽẽ"
+  },
+  "nav": {
+    "map": "Asase mfoni",
+    "alerts": "Kɔkɔbɔ",
+    "myArea": "Me mpɔtam",
+    "report": "Bɔ amaneɛ",
+    "more": "Bio",
+    "data": "Nsɛm",
+    "howItWorks": "Sɛnea ɛyɛ adwuma",
+    "sources": "Nsɛm a yɛde di dwuma",
+    "methods": "Akwan",
+    "about": "Yɛn ho asɛm",
+    "language": "Kasa",
+    "menu": "Menu",
+    "close": "To mu",
+    "floods": "Nsuyiri",
+    "power": "Dumsɔ",
+    "groupWatch": "Hwɛ",
+    "groupAct": "Yɛ biribi",
+    "groupMore": "Bio",
+    "rivers": "Nsubɔnten",
+    "reports": "Bosome biara amanneɛbɔ",
+    "districts": "Mansin ahorow",
+    "checkLand": "Hwɛ asase",
+    "admin": "Admin"
+  },
+  "home": {
+    "title": "Nea ɛresesa wɔ Ghana seesei",
+    "openMap": "Bue ɔman asase mfoni no",
+    "viewAlerts": "Hwɛ nsakraeɛ foforɔ",
+    "newLast72h": "Foforɔ wɔ nnɔnhwere 72 a atwam mu",
+    "activeHotspots": "Mmeae a asɛm wɔ hɔ",
+    "latestImage": "Satellite mfoni a ɛyɛ foforɔ",
+    "lastUpdated": "Wɔsesaa nsɛm no",
+    "browseData": "Hwɛ na twe nsɛm no",
+    "readMethods": "Kenkan akwan no"
+  },
+  "map": {
+    "title": "Ɔman asase mfoni",
+    "search": "Hwehwɛ ɔmansin anaa beaeɛ",
+    "searchPlaceholder": "Ɔmansin, kuro anaa mantam",
+    "nearMe": "Bɛn me",
+    "layers": "Nsɛm ahodoɔ",
+    "legend": "Nkyerɛaseɛ",
+    "timeWindow": "Berɛ",
+    "last72h": "Nnɔnhwere 72 a atwam",
+    "last7d": "Nnanson a atwam",
+    "last30d": "Nna 30 a atwam",
+    "last90d": "Nna 90 a atwam",
+    "noChanges": "Wɔnhunuu nsakraeɛ foforɔ biara saa berɛ yi mu.",
+    "resetView": "Kyerɛ Ghana nyinaa",
+    "loading": "Asase mfoni no reba",
+    "hidePanel": "Fa nkyerɛwee no sie",
+    "showPanel": "Kyerɛ nkyerɛwee no",
+    "possible": "Kyerɛ nea ebia ɛyɛ nokware",
+    "possibleHint": "Wɔnnya nhwɛɛ no mprenu; ebia fã yɛ nokware",
+    "urgentHint": "Ɛho hia ntɛm: amena a ne kɛse yɛ hɛkta 15 anaa nea ɛboro saa, amena hɛkta 10 wɔ kilomita 1 mu, anaa hɛkta 2 wɔ kwae a wɔbɔ ho ban mu, kurom anaa sukuu ho.",
+    "floodProne": "Baabi a nsuyiri taa ba",
+    "floodProneHint": "Baabi a nsu atare so fi 1984: asubɔnten ho, ataa ne nsuo ano. Bruu kɔkɔɔ kyerɛ sɛ ɛtaa ba.",
+    "licensedMine": "Wɔ mmara so fagudeɛ mu"
+  },
+  "severity": {
+    "normal": "Ɛyɛ",
+    "watch": "Hwɛ",
+    "elevated": "Ɛkɔ soro",
+    "urgent": "Ɛho hia ntɛm",
+    "label": "Asiane dodoɔ"
+  },
+  "type": {
+    "vegetation_loss": "Nnua ne nwura a ayera",
+    "surface_disturbance": "Asase a wɔasɛe",
+    "water_change": "Nsuo nsakraeɛ",
+    "flood_risk": "Nsuyire asiane",
+    "fire": "Ogya",
+    "label": "Nsakraeɛ su"
+  },
+  "confidence": {
+    "low": "Ahotosoɔ ketewa",
+    "medium": "Ahotosoɔ mfinimfini",
+    "high": "Ahotosoɔ kɛseɛ",
+    "label": "Ahotosoɔ"
+  },
+  "event": {
+    "seenBySatellite": "Satellite hunuu no",
+    "detected": "Wɔhunuu",
+    "area": "Kɛseɛ",
+    "district": "Ɔmansin",
+    "region": "Mantam",
+    "source": "Fibea",
+    "watchThisArea": "Hwɛ beaeɛ yi",
+    "share": "Kyɛ",
+    "openOnMap": "Bue wɔ asase mfoni so",
+    "back": "San kɔ"
+  },
+  "alerts": {
+    "title": "Nsakraeɛ foforɔ",
+    "empty": "Nsakraeɛ biara nni hɔ.",
+    "loadMore": "Kyerɛ bio"
+  },
+  "myArea": {
+    "title": "Me mpɔtam",
+    "empty": "Wonhwɛ beaeɛ biara seesei.",
+    "addDistrict": "Fa ɔmansin ka ho",
+    "useLocation": "Fa me beaeɛ",
+    "remove": "Yi firi hɔ"
+  },
+  "report": {
+    "title": "Bɔ nea wohunu ho amaneɛ",
+    "photo": "Mfoni",
+    "location": "Beaeɛ",
+    "description": "Ɛdeɛn na wohunuu?",
+    "submit": "Soma amaneɛbɔ no",
+    "sent": "Wɔde amaneɛbɔ no akɔ. Wɔbɛhwɛ mu."
+  },
+  "data": {
+    "title": "Nsɛm ne twe",
+    "downloadCsv": "Twe CSV",
+    "downloadGeojson": "Twe GeoJSON"
+  },
+  "sources": {
+    "title": "Nsɛm no fibea"
+  },
+  "methods": {
+    "title": "Sɛnea ɛyɛ adwuma"
+  },
+  "common": {
+    "loading": "Ɛreba",
+    "retry": "Sɔ hwɛ bio",
+    "error": "Biribi ankɔ yie.",
+    "offline": "Wonni intanɛt. Yɛrekyerɛ nsɛm a yɛkoraa wɔ wo mfidie yi so.",
+    "search": "Hwehwɛ",
+    "cancel": "Gyae",
+    "save": "Kora"
+  },
+  "errors": {
+    "notFoundTitle": "Yɛnhunu kratafa no",
+    "goHome": "Kɔ asase mfoni no so"
+  },
+  "land": {
+    "eudrTitle": "Kookoo mfuw ne EU kwae mmara",
+    "eudrBody": "Efi 30 December 2026, kookoo a wɔtɔn kɔ EU no ɛsɛ sɛ efi asase a wɔantwa kwae so mfi 31 December 2020. Fa pin si wo afuw so na amanneɛbɔ no bɛkyerɛ kwae a na ɛwɔ so 2020 awiei, EU ankasa map so, ne nnua a ayera fi saa bere no. Tintim PDF no ma wo tɔfo anaa wo kuw. Ɛyɛ adansedi, ɛnyɛ mmara so gyinae; COCOBOD nhyehyɛe no da so wɔ hɔ."
+  }
+}

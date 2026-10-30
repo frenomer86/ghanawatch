@@ -1,0 +1,24 @@
+# HTTPS certificates are obtained and renewed automatically (Let's Encrypt).
+{$DOMAIN}, www.{$DOMAIN} {
+	encode zstd gzip
+	@www host www.{$DOMAIN}
+	redir @www https://{$DOMAIN}{uri} permanent
+	# Nothing legitimate sends more than a 5 MB photo; larger bodies stop here.
+	request_body {
+		max_size 6MB
+	}
+	# Caddy sets X-Forwarded-For to the real caller; the app trusts only the last entry.
+	reverse_proxy web:3000
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		# Do not advertise the server software.
+		-Server
+		-Via
+		# Nor the framework.
+		-X-Nextjs-Cache
+		-X-Nextjs-Prerender
+		-X-Nextjs-Stale-Time
+		-X-Nextjs-Postponed
+		-X-Nextjs-Matched-Path
+	}
+}
