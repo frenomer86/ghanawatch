@@ -154,7 +154,8 @@ class DS(torch.utils.data.Dataset):
 
 def make_model(pretrained=True):
     import segmentation_models_pytorch as smp
-    return smp.Unet(encoder_name=ENCODER, encoder_weights="imagenet" if pretrained else None, in_channels=N_CH, classes=1)
+    # A lighter decoder than the default (256..16): about 30% less compute at 128 px, for CPU training and inference.
+    return smp.Unet(encoder_name=ENCODER, encoder_weights="imagenet" if pretrained else None, in_channels=N_CH, classes=1, decoder_channels=(128, 64, 32, 16, 16))
 
 
 def dice_loss(logits, y):
@@ -171,8 +172,8 @@ def to20m(x, y):
     return x2, (F.avg_pool2d(y, 2) >= 0.5).float()
 
 
-def train(epochs=16, bs=16, per_epoch=4000):
-    model = make_model(True)
+def train(epochs=14, bs=16, per_epoch=2400):
+    model = make_model(True).to(memory_format=torch.channels_last)
     ds = DS(["A_train", "B_train"], True)
     # B (production inputs) is drawn twice as often as A.
     nA = len(ds.parts[0][0]); nB = len(ds.parts[1][0])
@@ -184,12 +185,23 @@ def train(epochs=16, bs=16, per_epoch=4000):
     pos_w = torch.tensor(3.0)
     rng = np.random.default_rng(1)
     t0 = time.time(); log = []
-    for ep in range(epochs):
+    start = 0
+    ck = f"{OUT}/unet_ckpt.pt"
+    if os.path.exists(ck):  # resume after an interruption, same schedule
+        c = torch.load(ck, weights_only=False)
+        if c.get("epochs") == epochs:
+            model.load_state_dict(c["model"]); opt.load_state_dict(c["opt"]); sched.load_state_dict(c["sched"])
+            start = c["epoch"]; log = c["log"]; t0 -= c["seconds"]
+            print(f"resuming after epoch {start}", file=sys.stderr, flush=True)
+    for ep in range(start, epochs):
         model.train(); tot = 0.0
         for x, y in dl:
             if rng.random() < 0.2:
                 x, y = to20m(x, y)
-            logits = model(x)
+            # bfloat16 on the CPU's matrix units (AMX) for speed; the loss is computed in float32.
+            with torch.autocast("cpu", dtype=torch.bfloat16):
+                logits = model(x.contiguous(memory_format=torch.channels_last))
+            logits = logits.float()
             loss = F.binary_cross_entropy_with_logits(logits, y, pos_weight=pos_w) + dice_loss(logits, y)
             opt.zero_grad(); loss.backward(); opt.step(); sched.step()
             tot += float(loss)
@@ -197,6 +209,7 @@ def train(epochs=16, bs=16, per_epoch=4000):
         log.append({"epoch": ep + 1, "loss": tot / len(dl), "B_test_quick": ev, "minutes": round((time.time() - t0) / 60, 1)})
         print(json.dumps(log[-1]), file=sys.stderr, flush=True)
         torch.save(model.state_dict(), f"{OUT}/unet.pt")
+        torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep + 1, "epochs": epochs, "log": log, "seconds": time.time() - t0}, ck)
     json.dump({"encoder": ENCODER, "channels": CHANNELS, "epochs": epochs, "per_epoch": per_epoch, "log": log}, open(f"{OUT}/unet_meta.json", "w"), indent=1)
 
 
@@ -314,7 +327,7 @@ def export():
 if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "prep": prep(sys.argv[2] if len(sys.argv) > 2 else "AB")
-    elif cmd == "train": train(int(sys.argv[2]) if len(sys.argv) > 2 else 16)
+    elif cmd == "train": train(int(sys.argv[2]) if len(sys.argv) > 2 else 14)
     elif cmd == "eval": eval_all()
     elif cmd == "calibrate": calibrate()
     elif cmd == "export": export()

@@ -49,8 +49,14 @@ export async function loadSites(): Promise<{ sites: Site[]; districts: IndexDist
         properties->'placement'->>'protectedArea' reserve, properties->'placement'->>'mine' mine,
         properties->>'licensedMine' licensed, properties->>'licence' licence`;
   const multisensor = toRows<Row>(
-    await db.execute(sql`select scan_month as month, ${cols} from history_events
-      where centroid_lon is not null and method_version like 's2-galamsey-3.%' and properties->>'cohort' = 'true'`),
+    await db.execute(sql`select scan_month as month, ${cols} from history_events h
+      where centroid_lon is not null and method_version like 's2-galamsey-3.%' and properties->>'cohort' = 'true'
+        -- A site a person rejected (moderation or the monthly confirmation sample) leaves the index; a site that
+        -- simply grew back or was replaced by a newer outline keeps the months it was mined.
+        and not exists (
+          select 1 from change_events e
+          where e.method_version like 's2-galamsey-3.%' and e.source_event_id = h.source_event_id and e.status = 'dismissed'
+            and not (e.properties ? 'supersededBy') and coalesce(e.properties->>'autoDismissed', '') not like 'no longer mined%')`),
   );
   const legacyFallback = multisensor.length === 0;
   const history = legacyFallback

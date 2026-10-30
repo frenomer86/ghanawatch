@@ -57,8 +57,9 @@ export default async function ReadingTheMapPage({
           <h2>The Galamsey Index</h2>
           <p>
             For every district and month, the index is the hectares of land
-            first seen as likely galamsey in that month, per 100 km² of the
-            district, so that a small district and a large one can be compared.
+            newly confirmed as galamsey in that month, new sites and the spread
+            of existing ones together, per 100 km² of the district, so that a
+            small district and a large one can be compared.
             Districts rank by it; rank 1 is the worst month. The report also
             gives the new hectares themselves, the running total since the start
             of the record, the share inside forest reserves and on the watched
@@ -66,10 +67,10 @@ export default async function ReadingTheMapPage({
           </p>
           <ul>
             <li>
-              <strong>A site is counted once.</strong> A detection within about
-              200 m of an earlier one is the same site, and a site counts in the
-              month it was first seen; a rescan that confirms it does not make
-              it new again.
+              <strong>Every hectare is counted once.</strong> Ground counts in the
+              month it is confirmed as mined. A site that keeps spreading adds its
+              new ground in the month it spread; ground already counted never
+              counts again, and land that grows back is not subtracted.
             </li>
             <li>
               <strong>Named large-scale mines are left out.</strong> Work inside
@@ -89,9 +90,10 @@ export default async function ReadingTheMapPage({
             </li>
             <li>
               <strong>History.</strong> Months before GhanaWatch went live come
-              from the same method run on past imagery, cell by cell and month
-              by month; the earliest months rest on 2019 baseline imagery and
-              are marked where the baseline was thin.
+              from the same monthly method run on past imagery, cell by cell and
+              month by month. The record starts in 2017, two years before the
+              index, so mining that already existed in 2019 is known as such and
+              never counted as new.
             </li>
           </ul>
           <Suspense fallback={null}>
@@ -150,8 +152,9 @@ export default async function ReadingTheMapPage({
               look like illegal mining from space.
             </li>
             <li>
-              What happened under cloud. In the rainy season some areas have no
-              clear image for weeks.
+              Exactly when something happened under cloud. Radar sees through
+              cloud every month, but in the rains a small new site can be
+              confirmed a month or two after it was dug.
             </li>
             <li>
               Very small or slow changes, or who did something. People are never

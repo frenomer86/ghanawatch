@@ -80,7 +80,10 @@ interface Obs {
   ok: Uint8Array;
 }
 
-/** Combine per-scene observations into per-band medians with the two-pass screen. Exported for tests. */
+/**
+ * Combine per-scene observations into per-band medians with the two-pass screen. `obs` must be sorted by
+ * date, so that scenes of one pass are adjacent and counted once. Exported for tests.
+ */
 export function compositeObservations(obs: Obs[], n: number, nb: number): { refl: Float32Array[]; count: Uint8Array } {
   // One pass of the satellite counts once where neighbouring tiles overlap.
   const byDate = new Map<string, number>();
@@ -89,10 +92,6 @@ export function compositeObservations(obs: Obs[], n: number, nb: number): { refl
     return byDate.get(o.date)!;
   });
   const use = obs.map((o) => new Uint8Array(o.ok));
-  const seen = new Int16Array(n);
-  for (let i = 0; i < n; i++) {
-    seen.fill(0, 0, 0);
-  }
   const lastDate = new Int32Array(n).fill(-1);
   for (let k = 0; k < obs.length; k++) {
     const u = use[k];
@@ -237,6 +236,7 @@ export async function buildMonth(g: BlockGrid, month: string, fetchJson: FetchJs
           landsatUsed.push(s.id);
         }
       }
+      lobs.sort((a, b) => a.date.localeCompare(b.date)); // same-date scenes (overlapping rows) next to each other, counted once
       const lc = compositeObservations(lobs, n, 10);
       for (let i = 0; i < n; i++) {
         if (!need[i] || !lc.count[i]) continue;

@@ -1,0 +1,45 @@
+{
+ "RGB (paper's RF input)": {
+  "features": [
+   "B04",
+   "B03",
+   "B02"
+  ],
+  "IoU": 0.492,
+  "precision": 0.519,
+  "recall": 0.905,
+  "F1": 0.66
+ },
+ "RGB+ (paper's RF input)": {
+  "features": [
+   "B04",
+   "B03",
+   "B02",
+   "B08",
+   "B11",
+   "B12"
+  ],
+  "IoU": 0.551,
+  "precision": 0.577,
+  "recall": 0.924,
+  "F1": 0.71
+ },
+ "All 10 S2 bands": {
+  "features": [
+   "B02",
+   "B03",
+   "B04",
+   "B05",
+   "B06",
+   "B07",
+   "B08",
+   "B8A",
+   "B11",
+   "B12"
+  ],
+  "IoU": 0.598,
+  "precision": 0.621,
+  "recall": 0.94,
+  "F1": 0.748
+ }
+}

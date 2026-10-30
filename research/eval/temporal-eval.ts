@@ -47,6 +47,53 @@ interface Block {
   res: number;
 }
 
+/** Build and cache each month's channels and observation regime, so the model step can run later. */
+async function runCube(b: Block, from: string, to: string, out: string) {
+  const g = blockGrid(b.epsg, b.bbox, b.res);
+  const n = g.width * g.height;
+  const dir = join(out, b.id, "cube");
+  mkdirSync(dir, { recursive: true });
+  const dem = await buildDem(g, fetchJson);
+  const t = terrain(dem, g.width, g.height, g.res);
+  for (let mi = monthIndex(from); mi <= monthIndex(to); mi++) {
+    const m = monthName(mi);
+    if (existsSync(join(dir, `${m}.json`))) continue;
+    const t0 = Date.now();
+    const c = await buildMonth(g, m, fetchJson);
+    const regime = new Uint8Array(n);
+    for (let i = 0; i < n; i++) regime[i] = c.s2Obs[i] ? REGIME.sentinel2 : c.landsatObs[i] ? REGIME.landsat : c.s1Obs[i] ? REGIME.radar : REGIME.none;
+    const ch = buildChannels(c, t, n);
+    const flat = new Float32Array(ch.length * n);
+    ch.forEach((p, k) => flat.set(p, k * n));
+    writeNpy(join(dir, `${m}.npy`), flat, [ch.length, g.height, g.width], "f2");
+    writeNpy(join(dir, `${m}_regime.npy`), regime, [g.height, g.width], "u1");
+    writeFileSync(join(dir, `${m}.json`), JSON.stringify({ scenes: c.scenes, seconds: Math.round((Date.now() - t0) / 1000) }));
+    console.log(`[cube] ${b.id} ${m}: ${c.scenes.s2.length} S2, ${c.scenes.landsat.length} Landsat, ${c.scenes.s1.length} S1 scenes, ${Math.round((Date.now() - t0) / 1000)} s`);
+  }
+}
+
+function readNpyF16(path: string): Float32Array {
+  const buf = readFileSync(path);
+  const hl = buf.readUInt16LE(8);
+  const body = buf.subarray(10 + hl);
+  const h = new Uint16Array(body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength));
+  const out = new Float32Array(h.length);
+  for (let i = 0; i < h.length; i++) {
+    const x = h[i];
+    const sgn = x & 0x8000 ? -1 : 1;
+    const e = (x >> 10) & 0x1f;
+    const f = x & 0x3ff;
+    out[i] = e === 0 ? sgn * 2 ** -14 * (f / 1024) : e === 31 ? (f ? Number.NaN : sgn * Number.POSITIVE_INFINITY) : sgn * 2 ** (e - 15) * (1 + f / 1024);
+  }
+  return out;
+}
+
+function readNpyU8(path: string): Uint8Array {
+  const buf = readFileSync(path);
+  const hl = buf.readUInt16LE(8);
+  return Uint8Array.from(buf.subarray(10 + hl));
+}
+
 async function runNew(b: Block, from: string, to: string, out: string, model: Awaited<ReturnType<typeof loadModel>>) {
   const g = blockGrid(b.epsg, b.bbox, b.res);
   const n = g.width * g.height;
@@ -55,22 +102,36 @@ async function runNew(b: Block, from: string, to: string, out: string, model: Aw
   const statePath = join(dir, "state.gwts");
   const s = existsSync(statePath) ? decodeState(readFileSync(statePath)) : newState(n, { ...DEFAULT_PARAMS, modelPrior: model.meta.baseRate ?? DEFAULT_PARAMS.modelPrior });
   const params = { ...DEFAULT_PARAMS, modelPrior: model.meta.baseRate ?? DEFAULT_PARAMS.modelPrior };
-  const dem = await buildDem(g, fetchJson);
-  const t = terrain(dem, g.width, g.height, g.res);
+  const needDem = !existsSync(join(dir, "cube"));
+  const t = needDem ? terrain(await buildDem(g, fetchJson), g.width, g.height, g.res) : { slope: new Float32Array(0), relElev: new Float32Array(0) };
   const cover: Record<string, unknown>[] = existsSync(join(dir, "coverage.json")) ? JSON.parse(readFileSync(join(dir, "coverage.json"), "utf8")) : [];
   for (let mi = Math.max(monthIndex(from), s.lastMonth + 1); mi <= monthIndex(to); mi++) {
     const m = monthName(mi);
     const t0 = Date.now();
-    const c = await buildMonth(g, m, fetchJson);
-    const regime = new Uint8Array(n);
+    const cached = join(dir, "cube", `${m}.npy`);
+    let ch: Float32Array[];
+    let regime: Uint8Array;
+    let scenes = { s2: 0, landsat: 0, s1: 0 };
+    if (existsSync(cached)) {
+      const flat = readNpyF16(cached);
+      ch = Array.from({ length: flat.length / n }, (_, k) => flat.slice(k * n, (k + 1) * n));
+      regime = readNpyU8(join(dir, "cube", `${m}_regime.npy`));
+      const sc = JSON.parse(readFileSync(join(dir, "cube", `${m}.json`), "utf8")).scenes;
+      scenes = { s2: sc.s2.length, landsat: sc.landsat.length, s1: sc.s1.length };
+    } else {
+      const c = await buildMonth(g, m, fetchJson);
+      regime = new Uint8Array(n);
+      for (let i = 0; i < n; i++) regime[i] = c.s2Obs[i] ? REGIME.sentinel2 : c.landsatObs[i] ? REGIME.landsat : c.s1Obs[i] ? REGIME.radar : REGIME.none;
+      ch = buildChannels(c, t, n);
+      scenes = { s2: c.scenes.s2.length, landsat: c.scenes.landsat.length, s1: c.scenes.s1.length };
+    }
     let s2 = 0, ls = 0, rd = 0;
     for (let i = 0; i < n; i++) {
-      regime[i] = c.s2Obs[i] ? REGIME.sentinel2 : c.landsatObs[i] ? REGIME.landsat : c.s1Obs[i] ? REGIME.radar : REGIME.none;
       if (regime[i] === 1) s2++;
       else if (regime[i] === 2) ls++;
       else if (regime[i] === 3) rd++;
     }
-    const prob = await model.predict(buildChannels(c, t, n), g.width, g.height);
+    const prob = await model.predict(ch, g.width, g.height);
     const names: Record<number, string> = { 1: "sentinel2", 2: "landsat", 3: "radar" };
     const q = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
@@ -80,7 +141,7 @@ async function runNew(b: Block, from: string, to: string, out: string, model: Aw
     writeNpy(join(dir, "prob", `${m}.npy`), q, [g.height, g.width], "u1");
     step(s, mi, prob, regime, params);
     writeFileSync(statePath, encodeState(s));
-    cover.push({ month: m, sentinel2: s2 / n, landsat: ls / n, radarOnly: rd / n, none: (n - s2 - ls - rd) / n, scenes: { s2: c.scenes.s2.length, landsat: c.scenes.landsat.length, s1: c.scenes.s1.length }, seconds: Math.round((Date.now() - t0) / 1000) });
+    cover.push({ month: m, sentinel2: s2 / n, landsat: ls / n, radarOnly: rd / n, none: (n - s2 - ls - rd) / n, scenes, seconds: Math.round((Date.now() - t0) / 1000) });
     writeFileSync(join(dir, "coverage.json"), JSON.stringify(cover, null, 1));
     console.log(`[new] ${b.id} ${m}: S2 ${Math.round((s2 / n) * 100)}% Landsat ${Math.round((ls / n) * 100)}% radar-only ${Math.round((rd / n) * 100)}% ${Math.round((Date.now() - t0) / 1000)} s`);
   }
@@ -146,6 +207,7 @@ async function main() {
   const to = arg("to") ?? "2022-01";
   const out = arg("out")!;
   const which = arg("which") ?? "new,old";
+  if (which.includes("cube")) for (const b of blocks) await runCube(b, from, to, out);
   if (which.includes("new")) {
     const model = await loadModel(arg("model"));
     for (const b of blocks) await runNew(b, from, to, out, model);

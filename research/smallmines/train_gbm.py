@@ -77,32 +77,45 @@ def main():
     t0 = time.time()
     patches = index()
     rng = np.random.default_rng(0)
-    Xtr, ytr, btr = [], [], []
-    test = []
-    for i, p in enumerate(patches):
-        x, m = load(p)
-        f = pixel_features(x).astype(np.float32)
-        y = m.ravel()
-        if p.split == "train":
-            pos = np.flatnonzero(y == 1)
-            neg = np.flatnonzero(y == 0)
-            take = np.concatenate([rng.choice(pos, min(len(pos), 250), replace=False) if len(pos) else pos, rng.choice(neg, min(len(neg), 250), replace=False)])
-            Xtr.append(f[take]); ytr.append(y[take]); btr.append(np.full(len(take), hash(block_of(p)) % 10_000))
-        else:
-            test.append((p, f, y))
-        if i % 500 == 0:
-            print(f"{i}/{len(patches)} patches, {time.time() - t0:.0f}s", file=sys.stderr)
-    Xtr = np.concatenate(Xtr); ytr = np.concatenate(ytr)
+    cache = os.path.join(OUT, "cache"); os.makedirs(cache, exist_ok=True)
+    tests = [p for p in patches if p.split == "test"]
+    if not os.path.exists(f"{cache}/gbm_test_y.npy"):
+        # Test features on disk (float16, memory-mapped): the whole test set never sits in memory.
+        XT = np.lib.format.open_memmap(f"{cache}/gbm_test_x.npy", "w+", np.float16, (len(tests), 128 * 128, len(ALL)))
+        YT = np.zeros((len(tests), 128 * 128), np.uint8)
+        Xtr, ytr = [], []
+        k = 0
+        for i, p in enumerate(patches):
+            x, m = load(p)
+            f = pixel_features(x).astype(np.float32)
+            y = m.ravel()
+            if p.split == "train":
+                pos = np.flatnonzero(y == 1); neg = np.flatnonzero(y == 0)
+                take = np.concatenate([rng.choice(pos, min(len(pos), 250), replace=False) if len(pos) else pos, rng.choice(neg, min(len(neg), 250), replace=False)])
+                Xtr.append(f[take]); ytr.append(y[take])
+            else:
+                XT[k] = f.astype(np.float16); YT[k] = y; k += 1
+            if i % 500 == 0:
+                print(f"{i}/{len(patches)} patches, {time.time() - t0:.0f}s", file=sys.stderr)
+        XT.flush(); np.save(f"{cache}/gbm_train_x.npy", np.concatenate(Xtr)); np.save(f"{cache}/gbm_train_y.npy", np.concatenate(ytr)); np.save(f"{cache}/gbm_test_y.npy", YT)
+    Xtr = np.load(f"{cache}/gbm_train_x.npy"); ytr = np.load(f"{cache}/gbm_train_y.npy")
+    XT = np.load(f"{cache}/gbm_test_x.npy", mmap_mode="r"); YT = np.load(f"{cache}/gbm_test_y.npy")
+    test = [(None, XT, k) for k in range(len(YT))]
     print(f"train pixels {len(ytr)} ({ytr.mean():.2%} mining), test patches {len(test)}", file=sys.stderr)
 
-    results = {}
+    path = os.path.join(OUT, "gbm_ablation.json")
+    results = json.load(open(path)) if os.path.exists(path) else {}
     for name, cols in CONFIGS.items():
+        if name in results and name != "+ texture (full)":
+            continue
         idx = [ALL.index(c) for c in cols]
         model = lgb.LGBMClassifier(n_estimators=400, learning_rate=0.05, num_leaves=63, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, verbose=-1, n_jobs=2)
         model.fit(Xtr[:, idx], ytr)
         tp = fp = fn = 0
-        for p, f, y in test:
-            pr = model.predict_proba(f[:, idx])[:, 1] >= 0.5
+        for s0 in range(0, len(YT), 64):
+            f = np.asarray(XT[s0:s0 + 64][:, :, idx], np.float32).reshape(-1, len(idx))
+            y = YT[s0:s0 + 64].ravel()
+            pr = model.predict_proba(f)[:, 1] >= 0.5
             tp += int((pr & (y == 1)).sum()); fp += int((pr & (y == 0)).sum()); fn += int((~pr & (y == 1)).sum())
         results[name] = {"features": cols, **scores(tp, fp, fn)}
         print(f"{name:60s} IoU {results[name]['IoU']:.3f}  P {results[name]['precision']:.3f}  R {results[name]['recall']:.3f}  F1 {results[name]['F1']:.3f}  ({time.time() - t0:.0f}s)", file=sys.stderr)
@@ -110,8 +123,8 @@ def main():
             model.booster_.save_model(os.path.join(OUT, "gbm_full.txt"))
             imp = sorted(zip(cols, model.booster_.feature_importance("gain")), key=lambda t: -t[1])
             results[name]["importance_gain"] = [(c, float(v)) for c, v in imp]
-    with open(os.path.join(OUT, "gbm_ablation.json"), "w") as fh:
-        json.dump(results, fh, indent=1)
+        with open(path, "w") as fh:
+            json.dump(results, fh, indent=1)
 
 
 if __name__ == "__main__":
