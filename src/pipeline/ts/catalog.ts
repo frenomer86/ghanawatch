@@ -53,6 +53,18 @@ async function post<T>(fetchJson: FetchJson, url: string, body: unknown): Promis
   return fetchJson<T>(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 }
 
+/**
+ * The reflectance offset to apply to a Sentinel-2 band. Since processing baseline 04.00 (25 January 2022)
+ * ESA stores L2A values with +1000 added, and the band metadata says offset -0.1. Earth Search has already
+ * removed that +1000 from the files it serves when `earthsearch:boa_offset_applied` is true, yet keeps
+ * advertising -0.1; applying it again puts every value 0.1 too low (half the blue band went negative).
+ * So the offset is used only when the item says it has not been applied.
+ */
+export function s2Offset(props: Record<string, unknown>, advertised: number | undefined): number {
+  if (props["earthsearch:boa_offset_applied"] === true) return 0;
+  return advertised ?? 0;
+}
+
 /** All Sentinel-2 L2A scenes over the bbox in [from, to), one per tile and date (latest processing run). */
 export async function searchS2(fetchJson: FetchJson, bbox: [number, number, number, number], from: Date, to: Date, maxCloud = 95): Promise<S2Scene[]> {
   const res = await post<{ features: Feature[] }>(fetchJson, EARTH_SEARCH, {
@@ -78,7 +90,7 @@ export async function searchS2(fetchJson: FetchJson, bbox: [number, number, numb
       scl: a.scl.href,
       visual: a.visual?.href ?? "",
       scale: rb.map((b) => b.scale ?? 0.0001),
-      offset: rb.map((b) => b.offset ?? 0),
+      offset: rb.map((b) => s2Offset(f.properties, b.offset)),
     });
   }
   // Earth Search lists some acquisitions twice (…_0_L2A and …_1_L2A); keep the latest run.

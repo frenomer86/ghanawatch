@@ -18,7 +18,10 @@ export const RADAR = [17, 18, 19];
 export const REL_ELEV_RADIUS = 15;
 const EPS = 1e-6;
 
-const nd = (a: number, b: number) => (a - b) / (a + b + EPS);
+/** Normalised difference on reflectances clamped at 0, clipped to [-1, 1] (dark water can read slightly negative). */
+const clip = (v: number) => (v > 1 ? 1 : v < -1 ? -1 : v);
+const pos = (v: number) => (v > 0 ? v : 0);
+const nd = (a: number, b: number) => clip((pos(a) - pos(b)) / (pos(a) + pos(b) + EPS));
 
 /** Mean over a (2r+1)^2 window with edge replication (integral image), as in features.py. */
 export function boxMean(x: Float32Array, w: number, h: number, r: number): Float32Array {
@@ -85,7 +88,7 @@ export function buildChannels(c: Pick<MonthComposite, "refl" | "optOk" | "reOk" 
       ch[10][i] = nd(B8, B4);
       ch[11][i] = nd(B3, B8);
       ch[12][i] = nd(B3, B11);
-      ch[13][i] = (B11 + B4 - (B8 + B2)) / (B11 + B4 + (B8 + B2) + EPS);
+      ch[13][i] = clip((pos(B11) + pos(B4) - (pos(B8) + pos(B2))) / (pos(B11) + pos(B4) + (pos(B8) + pos(B2)) + EPS));
       ch[14][i] = nd(B4, B3);
       ch[15][i] = nd(B8, B12);
       ch[16][i] = c.reOk[i] ? nd(B8A, B5) : 0;

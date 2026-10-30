@@ -27,7 +27,9 @@ EPS = 1e-6
 
 
 def nd(a, b):
-    return (a - b) / (a + b + EPS)
+    """Normalised difference on reflectances clamped at 0, clipped to [-1, 1] (as features.ts)."""
+    a = np.clip(a, 0, None); b = np.clip(b, 0, None)
+    return np.clip((a - b) / (a + b + EPS), -1, 1)
 
 
 def box_mean(x: np.ndarray, r: int) -> np.ndarray:
@@ -64,7 +66,8 @@ def build(refl: np.ndarray | None, vv_db: np.ndarray, vh_db: np.ndarray, dem: np
         out[10] = nd(b["B08"], b["B04"])
         out[11] = nd(b["B03"], b["B08"])
         out[12] = nd(b["B03"], b["B11"])
-        out[13] = ((b["B11"] + b["B04"]) - (b["B08"] + b["B02"])) / ((b["B11"] + b["B04"]) + (b["B08"] + b["B02"]) + EPS)
+        P = {k: np.clip(v, 0, None) for k, v in b.items()}
+        out[13] = np.clip(((P["B11"] + P["B04"]) - (P["B08"] + P["B02"])) / ((P["B11"] + P["B04"]) + (P["B08"] + P["B02"]) + EPS), -1, 1)
         out[14] = nd(b["B04"], b["B03"])
         out[15] = nd(b["B08"], b["B12"])
         out[16] = nd(b["B8A"], b["B05"])

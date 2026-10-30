@@ -118,9 +118,10 @@ class DS(torch.utils.data.Dataset):
         """Hide channel groups the way a month can: landsat (no red edge, NIR from B8A), radar_only, cloud holes."""
         if regime == "landsat":
             x[ci["B08"]] = x[ci["B8A"]]
-            nd = lambda a, b: (x[ci[a]] - x[ci[b]]) / (x[ci[a]] + x[ci[b]] + 1e-6)
+            P = lambda a: np.clip(x[ci[a]], 0, None)
+            nd = lambda a, b: np.clip((P(a) - P(b)) / (P(a) + P(b) + 1e-6), -1, 1)
             x[ci["NDVI"]] = nd("B8A", "B04"); x[ci["NDWI"]] = nd("B03", "B8A"); x[ci["NBR"]] = nd("B8A", "B12")
-            x[ci["BSI"]] = ((x[ci["B11"]] + x[ci["B04"]]) - (x[ci["B8A"]] + x[ci["B02"]])) / ((x[ci["B11"]] + x[ci["B04"]]) + (x[ci["B8A"]] + x[ci["B02"]]) + 1e-6)
+            x[ci["BSI"]] = np.clip(((P("B11") + P("B04")) - (P("B8A") + P("B02"))) / ((P("B11") + P("B04")) + (P("B8A") + P("B02")) + 1e-6), -1, 1)
             x[ci["RE_OK"]] = 0
         elif regime == "radar_only":
             x[ci["OPT_OK"]] = 0; x[ci["RE_OK"]] = 0

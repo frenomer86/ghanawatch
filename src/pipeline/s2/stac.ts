@@ -8,7 +8,11 @@ export interface Scene {
   cloud: number;
   epsg: number;
   assets: { blue: string; green: string; red: string; nir: string; swir16: string; scl: string; visual: string };
-  /** Reflectance = DN * scale + offset (offset -0.1 since processing baseline 04.00). */
+  /**
+   * Reflectance = DN * scale + offset. Since processing baseline 04.00 the advertised offset is -0.1, but
+   * Earth Search has already removed it from the files when `earthsearch:boa_offset_applied` is true, so it
+   * is applied only when that flag is false (see ts/catalog.ts s2Offset).
+   */
   scale: number;
   offset: number;
 }
@@ -71,7 +75,7 @@ export async function searchScenes(
           visual: a.visual?.href,
         },
         scale: rb.scale ?? 0.0001,
-        offset: rb.offset ?? 0,
+        offset: f.properties["earthsearch:boa_offset_applied"] === true ? 0 : (rb.offset ?? 0),
       } as Scene;
     })
     .filter((s) => Object.values(s.assets).every((h) => typeof h === "string" && h.startsWith("https://")));

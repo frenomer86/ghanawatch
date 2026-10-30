@@ -244,3 +244,12 @@ describe("half-precision files", () => {
     expect(toHalf(1e6)).toBe(0x7c00);
   });
 });
+
+describe("Sentinel-2 reflectance offset", () => {
+  it("does not subtract the baseline-04.00 offset twice when Earth Search has already applied it", async () => {
+    const { s2Offset } = await import("@/pipeline/ts/catalog");
+    expect(s2Offset({ "s2:processing_baseline": "04.00", "earthsearch:boa_offset_applied": true }, -0.1)).toBe(0);
+    expect(s2Offset({ "s2:processing_baseline": "04.00", "earthsearch:boa_offset_applied": false }, -0.1)).toBe(-0.1);
+    expect(s2Offset({ "s2:processing_baseline": "03.01" }, 0)).toBe(0);
+  });
+});

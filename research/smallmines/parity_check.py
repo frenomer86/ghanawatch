@@ -35,7 +35,8 @@ def main(n=6, seed=1):
             scl = read(x["assets"]["scl"]["href"], b, (128, 128))
             ok = np.isin(scl, [4, 5, 6])
             if ok.mean() < 0.5: continue
-            off = x["assets"]["red"].get("raster:bands", [{}])[0].get("offset", 0) or 0
+            # Earth Search has already removed the baseline-04.00 offset when this flag is true (see ts/catalog.ts).
+            off = 0 if x["properties"].get("earthsearch:boa_offset_applied") is True else (x["assets"]["red"].get("raster:bands", [{}])[0].get("offset", 0) or 0)
             arr = np.stack([read(x["assets"][k]["href"], b, (128, 128)).astype(np.float32) for k in BANDS])
             # to reflectance with the scene's own offset
             refl = arr * 1e-4 + off
