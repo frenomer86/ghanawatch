@@ -218,10 +218,13 @@ def train(epochs=14, bs=16, per_epoch=2400):
 def predict_set(model, name, regime, limit=None, scale20=False):
     model.eval()
     ds = DS([name], False, regime); ds.rng = np.random.default_rng(42)
-    n = len(ds) if limit is None else min(limit, len(ds))
+    # The patch files are ordered by place, and the first patches hold far less mining than the rest (1.9% of
+    # pixels in the first 600 training patches against 7.6% overall), so a limited set is a seeded random sample.
+    order = np.arange(len(ds)) if limit is None else np.sort(np.random.default_rng(7).permutation(len(ds))[: min(limit, len(ds))])
+    n = len(order)
     P, Yall = [], []
     for s in range(0, n, 32):
-        xb, yb = zip(*(ds[i] for i in range(s, min(n, s + 32))))
+        xb, yb = zip(*(ds[int(i)] for i in order[s:s + 32]))
         x = torch.stack(xb); y = torch.stack(yb)
         if scale20:
             x, y = to20m(x, y)
@@ -290,7 +293,8 @@ def export():
 
     x = torch.zeros(1, N_CH, 128, 128)
     path32 = f"{OUT}/gw_mining_unet_fp32.onnx"
-    torch.onnx.export(WithSigmoid(model), x, path32, input_names=["x"], output_names=["p"],
+    wrapped = WithSigmoid(model).eval()
+    torch.onnx.export(wrapped, x, path32, input_names=["x"], output_names=["p"],
                       dynamic_axes={"x": {0: "n", 2: "h", 3: "w"}, "p": {0: "n", 2: "h", 3: "w"}}, opset_version=17, dynamo=False)
     # Store weights as float16 with a Cast back to float32 (computation stays float32): half the file.
     m = onnx.load(path32)
@@ -314,14 +318,16 @@ def export():
     ev = json.load(open(f"{OUT}/unet_eval.json")) if os.path.exists(f"{OUT}/unet_eval.json") else {}
     json.dump({"model": "gw_mining_unet", "version": "3.0", "encoder": ENCODER, "channels": CHANNELS, "mean": norm["mean"], "std": norm["std"],
                "patch": 128, "stride": 96, "threshold": 0.5, "calibration": cal.get("calibration"), "baseRate": cal.get("baseRate"),
-               "trainedOn": "SmallMinesDS (Ofori-Ampofo et al., IEEE GRSL 2025) official training split: its own 2016 and 2022 patches plus GhanaWatch composites of Dec 2021-Feb 2022 at the same footprints",
+               "trainedOn": "SmallMinesDS (Ofori-Ampofo et al., IEEE GRSL 2025) official training split: its own 2016 and 2022 patches plus GhanaWatch January 2022 composites at the same footprints",
                "metrics": ev},
               open(f"{OUT}/gw_mining_unet.json", "w"), indent=1)
     import onnxruntime as ort
     s = ort.InferenceSession(f"{OUT}/gw_mining_unet.onnx")
     xb = np.random.default_rng(0).normal(size=(2, N_CH, 128, 128)).astype(np.float32)
     a = s.run(None, {"x": xb})[0]
-    b = WithSigmoid(model)(torch.from_numpy(xb)).detach().numpy()
+    # The exporter restores the module's previous mode afterwards; compare in inference mode.
+    with torch.no_grad():
+        b = wrapped.eval()(torch.from_numpy(xb)).numpy()
     print("exported", os.path.getsize(f"{OUT}/gw_mining_unet.onnx") / 1e6, "MB; max |onnx - torch|", float(np.abs(a - b).max()), file=sys.stderr)
 
 

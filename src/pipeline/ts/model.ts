@@ -51,7 +51,9 @@ export async function loadModel(dir = MODEL_DIR): Promise<MiningModel> {
   } catch {
     throw new Error("onnxruntime-node is not installed (run `npm install` without --omit=optional on the machine that runs the detector)");
   }
-  const session = await ort.InferenceSession.create(onnxPath, { intraOpNumThreads: Number(process.env.GW_MODEL_THREADS ?? 0) || undefined, graphOptimizationLevel: "all" });
+  // onnxruntime-node rejects an explicit undefined thread count, so the option is set only when given.
+  const threads = Number(process.env.GW_MODEL_THREADS ?? 0);
+  const session = await ort.InferenceSession.create(onnxPath, { graphOptimizationLevel: "all", ...(threads > 0 ? { intraOpNumThreads: threads } : {}) });
   const norm: Norm = { mean: meta.mean, std: meta.std };
   return {
     meta,
