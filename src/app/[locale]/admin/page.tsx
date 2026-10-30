@@ -85,7 +85,10 @@ async function AdminBody({ full }: { full: boolean }) {
     .limit(12);
   const pending = full ? await db.select().from(communityReports).where(eq(communityReports.status, "pending")).orderBy(desc(communityReports.createdAt)).limit(50) : [];
   const sightings = full ? await pendingSightings(50) : [];
-  const cases = await openCases(50);
+  // Open cases carry the reporter's exact spot, and news signals are staff-only working material: like the
+  // queues, they wait until the account has two-step sign-in on, so a stolen password alone shows no more
+  // than the public site does.
+  const cases = full ? await openCases(50) : [];
   const [counts] = await db
     .select({
       newEvents: sql<number>`count(*) filter (where status = 'new')::int`,
@@ -93,7 +96,7 @@ async function AdminBody({ full }: { full: boolean }) {
     })
     .from(changeEvents);
   // Background signals from public news and disaster feeds; staff only, never on public pages.
-  const signals = await db.select().from(newsSignals).orderBy(desc(sql`coalesce(${newsSignals.publishedAt}, ${newsSignals.createdAt})`)).limit(40);
+  const signals = full ? await db.select().from(newsSignals).orderBy(desc(sql`coalesce(${newsSignals.publishedAt}, ${newsSignals.createdAt})`)).limit(40) : [];
   const unreviewed = await db
     .select({ id: changeEvents.id, title: changeEvents.titleEn, severity: changeEvents.severity, detectedAt: changeEvents.detectedAt, updatedAt: changeEvents.updatedAt })
     .from(changeEvents)
@@ -148,7 +151,7 @@ async function AdminBody({ full }: { full: boolean }) {
           of the area and can back up a detection already there. Staff only: nothing here is shown on the public site.
         </p>
         {signals.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No signals yet.</p>
+          <p className="mt-3 text-sm text-muted-foreground">{full ? "No signals yet." : "Shown once two-step sign-in is on."}</p>
         ) : (
           <div className="mt-3 overflow-x-auto focus-visible:outline-2 focus-visible:outline-ring" tabIndex={0} role="region" aria-label="Pipeline runs">
             <table className="w-full text-sm">

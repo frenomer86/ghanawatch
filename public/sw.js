@@ -3,9 +3,11 @@
  *  - app shell + static assets: cache-first (immutable hashed URLs)
  *  - API reads (/api/v1/*): network-first with cached fallback, 24 h max age
  *  - basemap tiles and boundaries: stale-while-revalidate, LRU-capped
- *  - navigations: network-first, falling back to the cached page, then /offline
+ *  - navigations: network-first, falling back to the cached page, then /offline. Staff pages and pages
+ *    rendered for a signed-in staff member (marked X-GW-Offline: no-store by src/proxy.ts) are never kept.
  */
-const VERSION = "gw-v1";
+// v2: v1 kept every visited page, staff pages included; changing the version deletes those copies.
+const VERSION = "gw-v2";
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const API = `${VERSION}-api`;
@@ -34,9 +36,15 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  // Signing out empties the API cache so nothing read while signed in survives on the device.
+  // Signing out empties the API cache and the saved pages so nothing read while signed in survives on the
+  // device; the offline page and the manifest are fetched again.
   if (event.data && event.data.type === "clear-api-cache") {
-    event.waitUntil(caches.delete(API));
+    event.waitUntil(
+      Promise.all([caches.delete(API), caches.delete(SHELL)])
+        .then(() => caches.open(SHELL))
+        .then((c) => c.addAll([OFFLINE_URL, "/manifest.webmanifest"]))
+        .catch(() => undefined),
+    );
     return;
   }
   if (event.data === "SKIP_WAITING") self.skipWaiting();
@@ -139,14 +147,17 @@ async function networkFirst(name, req, limit) {
   }
 }
 
+const STAFF_PATH = /^\/(?:[a-z]{2}\/)?admin(?:\/|$)/;
+
 async function navigation(req) {
   const cache = await caches.open(SHELL);
   try {
     const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
+    const keep = res.ok && !res.redirected && res.headers.get("x-gw-offline") !== "no-store" && !STAFF_PATH.test(new URL(req.url).pathname);
+    if (keep) cache.put(req, res.clone());
     return res;
   } catch {
-    const hit = await cache.match(req, { ignoreSearch: true });
+    const hit = STAFF_PATH.test(new URL(req.url).pathname) ? undefined : await cache.match(req, { ignoreSearch: true });
     if (hit) return hit;
     const offline = await cache.match(OFFLINE_URL);
     return offline || new Response("Offline", { status: 503, headers: { "content-type": "text/plain" } });

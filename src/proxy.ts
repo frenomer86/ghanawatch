@@ -12,8 +12,17 @@ const intl = createIntlMiddleware(routing);
 export function proxy(request: NextRequest) {
   const response = intl(request) ?? NextResponse.next();
   applySecurityHeaders(response, request);
+  // Staff pages, and any page rendered for a signed-in staff member (case pages show them pending photos
+  // and exact spots), must not be kept by the service worker's offline copy of visited pages. Next.js
+  // sends the same Cache-Control on every dynamic page, so this header is what public/sw.js reads.
+  // (The cookie name is SESSION_COOKIE in src/lib/server/auth.ts, which cannot be imported here.)
+  if (STAFF_PATH.test(request.nextUrl.pathname) || request.cookies.has("gw_session")) {
+    response.headers.set("X-GW-Offline", "no-store");
+  }
   return response;
 }
+
+const STAFF_PATH = /^\/(?:[a-z]{2}\/)?admin(?:\/|$)/;
 
 function applySecurityHeaders(res: NextResponse, req: NextRequest) {
   const isDev = process.env.NODE_ENV === "development";
