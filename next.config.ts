@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Native / filesystem-backed packages must not be bundled by Turbopack.
   serverExternalPackages: ["@electric-sql/pglite", "sharp", "@node-rs/argon2", "postgres"],
+  // Server code reads files under process.cwd() (data, uploads), so the build's file tracing would otherwise walk
+  // the whole project, including research outputs (gigabytes of training arrays) and local databases: it ran out
+  // of memory. None of these are served by the site.
+  outputFileTracingExcludes: {
+    "*": ["research/**", "models/**", "tests/**", ".data/**", ".data-*/**", "docs/**", "test-results/**"],
+  },
   turbopack: {
     rules: {
       "*.css": {
