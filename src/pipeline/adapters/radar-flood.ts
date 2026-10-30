@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { rows as toRows, type Db } from "@/lib/db/client";
 import type { BBox, Severity } from "@/lib/domain/types";
-import type { Adapter, NormalisedEvent } from "./types";
+import { NotConnectedError, type Adapter, type NormalisedEvent } from "./types";
 import { FLOOD_RULES, floodBox, floodExtent, type FloodPatch } from "../s1/flood";
 import { searchRadar, type RadarScene } from "../s1/pc";
 
@@ -179,10 +179,12 @@ export const radarFloodAdapter: Adapter = {
   slug: SLUG,
   async run(ctx) {
     if (!ctx.db) throw new Error("database handle required");
+    if (process.env.S1_FLOOD === "0") throw new NotConnectedError("switched off on this machine (S1_FLOOD=0)");
     const db = ctx.db;
     const started = Date.now();
     const budgetMs = Number(process.env.S1_FLOOD_BUDGET_MINUTES ?? 15) * 60_000;
-    const maxPasses = Number(process.env.S1_FLOOD_MAX_PASSES ?? 8);
+    // Each pass checked reads that pass and up to six baseline passes, at 40 m over a 30 km square.
+    const maxPasses = Number(process.env.S1_FLOOD_MAX_PASSES ?? 6);
     const triggers = selectTriggers(await loadTriggers(db, ctx.now));
     const state = loadState();
     const notes: string[] = [];

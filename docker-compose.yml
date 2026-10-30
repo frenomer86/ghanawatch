@@ -64,6 +64,8 @@ services:
       DB_POOL_MAX: "3"
       # The detection rule measured on 18 Oct 2026 (one clear pass, method s2-galamsey-2.3).
       S2_MIN_AFTER_OBS: "1"
+      # Detector 3.0, the monthly multi-sensor record (docs/detector.md); needs models/gw_mining_unet.*.
+      GW_DETECTOR: multisensor
     command: ["npm", "run", "pipeline", "--", "--every=180"]
     depends_on:
       db:

@@ -50,7 +50,7 @@ export const timeseriesAdapter: Adapter = {
   slug: SLUG,
   async run(ctx) {
     if (!ctx.db) throw new Error("database handle required");
-    if (detector() === "legacy") throw new NotConnectedError(process.env.GW_DETECTOR === "legacy" ? "GW_DETECTOR=legacy: the two-date Sentinel-2 scan is the live detector" : "model files missing (models/gw_mining_unet.onnx, .json): the two-date Sentinel-2 scan stays the live detector");
+    if (detector() === "legacy") throw new NotConnectedError(process.env.GW_DETECTOR !== "multisensor" ? "not enabled on this machine (GW_DETECTOR=multisensor): the two-date Sentinel-2 scan is the live detector" : "model files missing (models/gw_mining_unet.onnx, .json): the two-date Sentinel-2 scan stays the live detector");
     const db = ctx.db;
     const model = await loadModel();
     const budgetMs = Number(process.env.GW_TS_BUDGET_MINUTES ?? 60) * 60_000;

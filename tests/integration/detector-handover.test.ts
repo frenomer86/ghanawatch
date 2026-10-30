@@ -40,7 +40,10 @@ describe("2.x to 3.0 handover", () => {
     s.lastMonth = monthIndex("2026-09") - HANDOVER_SLACK - 1;
     saveState("hcell", s);
     expect(stateLastMonth("hcell")).toBe(s.lastMonth);
-    // No model files yet: the legacy detector runs everywhere.
+    // Not enabled on this machine: the legacy detector runs everywhere.
+    expect(handedOver("hcell", now)).toBe(false);
+    process.env.GW_DETECTOR = "multisensor";
+    // No model files yet: still the legacy detector.
     expect(handedOver("hcell", now)).toBe(false);
     writeFileSync(join(process.env.GW_MODEL_DIR!, "gw_mining_unet.onnx"), "x");
     writeFileSync(join(process.env.GW_MODEL_DIR!, "gw_mining_unet.json"), "{}");
@@ -51,6 +54,7 @@ describe("2.x to 3.0 handover", () => {
     process.env.GW_DETECTOR = "legacy";
     expect(handedOver("hcell", now)).toBe(false);
     delete process.env.GW_DETECTOR;
+    expect(handedOver("hcell", now)).toBe(false);
   });
 
   it("supersedes 2.x galamsey but keeps rivers and cleared land outside mining sites", async () => {

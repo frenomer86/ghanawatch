@@ -36,7 +36,7 @@ import { coveredShare, handedOver, liveSiteBoxes, UNDER_MINING_SHARE } from "../
  * tracker's record of a cell reaches the present, this scan reports there only muddy rivers and cleared land
  * that is not part of a mining site the tracker maps (farms, roads, building, logging: the cleared-land lines
  * of the district and forest-reserve cards); pits and cleared ground with pits are the tracker's. Until then,
- * and everywhere with GW_DETECTOR=legacy, it reports everything as before.
+ * and on any machine where the record is not enabled (ts/mode.ts), it reports everything as before.
  */
 const SLUG = "cdse-sentinel-2";
 // 2.3 is the relaxed one-clear-pass rule (S2_MIN_AFTER_OBS=1); 2.2 the two-pass rule.

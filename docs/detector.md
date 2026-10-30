@@ -30,8 +30,11 @@ the site already counts it. The radar adapter keeps its river watch for dredgers
 through cloud in cells not yet handed over. So nothing goes dark while the national backfill runs, and nothing
 is counted twice once it has (`tests/integration/detector-handover.test.ts`).
 
-Set `GW_DETECTOR=legacy` to return to 2.x completely; a machine without the model files
-(`models/gw_mining_unet.onnx` and `.json`) also runs 2.x, so land detection never stops.
+The monthly record is switched on per machine with `GW_DETECTOR=multisensor` (the server's pipeline service sets
+it in `docker-compose.yml`). Building it reads every image of every month since 2017, hundreds of megabytes per
+cell and month, so it belongs on the server or a machine with a fast, unmetered connection; anywhere else, and
+on any machine without the model files (`models/gw_mining_unet.onnx` and `.json`), 2.x runs as before, so land
+detection never stops.
 
 ## 2. Monthly composite (`ts/composite.ts`)
 
