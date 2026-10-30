@@ -80,7 +80,7 @@ export function parseQuery<T>(req: NextRequest, schema: ZodType<T>): T {
  * Read a request body of at most `maxBytes`, stopping as soon as the limit is passed rather than
  * buffering everything first; a chunked request with no Content-Length gets the same ceiling.
  */
-export async function readBody(req: NextRequest, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
+export async function readBody(req: Pick<Request, "headers" | "body">, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
   const declared = req.headers.get("content-length");
   if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > maxBytes)) throw new HttpError(413, `Body larger than ${maxBytes} bytes`);
   if (!req.body) return new Uint8Array(new ArrayBuffer(0));
@@ -143,12 +143,52 @@ export function handle(fn: (req: NextRequest, ctx: { params: Promise<Record<stri
 }
 
 /** Client IP, hashed with the app secret so logs never hold raw addresses. */
-export function clientIpHash(req: NextRequest): string {
+export function clientIpHash(req: Request): string {
   // The proxy in front of the app (Caddy) adds the caller's address last; earlier entries come from the
   // caller and can be forged to dodge rate limits, so only the last one counts.
   const fwd = req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  const ip = fwd || req.headers.get("x-real-ip") || "unknown";
+  const ip = ipBucket(fwd || req.headers.get("x-real-ip") || "unknown");
   return createHash("sha256").update(`${env().APP_SECRET}:${ip}`).digest("hex").slice(0, 32);
+}
+
+/**
+ * The unit a caller is counted by. An IPv4 address is one caller. An IPv6 host is normally given a whole
+ * /64 (18 quintillion addresses), so counting single IPv6 addresses would let anyone on a cheap server
+ * start every request from a fresh address and never meet a rate limit: IPv6 callers are counted per /64.
+ * IPv4-mapped IPv6 (::ffff:1.2.3.4) counts as the IPv4 address, and a port or zone suffix is dropped.
+ */
+export function ipBucket(raw: string): string {
+  let ip = raw.trim().toLowerCase();
+  const bracketed = ip.match(/^\[([^\]]+)\](?::\d+)?$/);
+  if (bracketed) ip = bracketed[1];
+  else if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) ip = ip.replace(/:\d+$/, "");
+  const zone = ip.indexOf("%");
+  if (zone >= 0) ip = ip.slice(0, zone);
+  const mapped = ip.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapped) return mapped[1];
+  if (!ip.includes(":")) return ip;
+  const groups = expandIpv6(ip);
+  return groups ? `${groups.slice(0, 4).join(":")}::/64` : ip;
+}
+
+/** The eight hextets of an IPv6 address (leading zeros dropped), or null when it is not one. */
+export function expandIpv6(ip: string): string[] | null {
+  let s = ip;
+  const v4 = s.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number);
+    if ([a, b, c, d].some((n) => n > 255)) return null;
+    s = `${s.slice(0, -v4[0].length)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
+  if (fill < 0 || (halves.length === 2 && fill === 0)) return null;
+  const all = [...head, ...Array<string>(fill).fill("0"), ...tail];
+  if (all.length !== 8 || all.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+  return all.map((g) => g.replace(/^0+(?=.)/, ""));
 }
 
 // ---------------------------------------------------------------------------
@@ -157,15 +197,23 @@ export function clientIpHash(req: NextRequest): string {
 // ---------------------------------------------------------------------------
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
+/** Above this many live keys the oldest are dropped, so a flood of distinct callers cannot grow memory without end. */
+const MAX_BUCKETS = 100_000;
 
 export function rateLimit(key: string, limit: number, windowMs: number): { ok: boolean; retryAfterSec: number } {
   const now = Date.now();
   let b = buckets.get(key);
   if (!b || b.resetAt <= now) {
     b = { count: 0, resetAt: now + windowMs };
+    buckets.delete(key);
     buckets.set(key, b);
-    if (buckets.size > 50_000) {
+    if (buckets.size > MAX_BUCKETS / 2) {
       for (const [k, v] of buckets) if (v.resetAt <= now) buckets.delete(k);
+    }
+    // Still too many: drop the oldest windows first (a Map iterates in insertion order).
+    for (const k of buckets.keys()) {
+      if (buckets.size <= MAX_BUCKETS) break;
+      buckets.delete(k);
     }
   }
   b.count++;

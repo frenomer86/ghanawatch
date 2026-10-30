@@ -4,6 +4,7 @@ import { ALLOWED_COG_PREFIX, makeGrid, readVisual, withRetry } from "@/pipeline/
 import { fromProj, toProj } from "@/pipeline/s2/process";
 import { Semaphore, TtlCache, roundCoord } from "./cache";
 import { getJson } from "./fetch";
+import { HttpError } from "@/lib/server/http";
 
 /**
  * Single Sentinel-2 passes over a spot, for the "latest passes" part of the
@@ -18,8 +19,11 @@ export const PASS_WINDOW_DAYS = 400;
 
 const listCache = new TtlCache<PassFrame[]>(500, 3 * 3_600_000);
 const frameCache = new TtlCache<RenderedPass>(200, 24 * 3_600_000);
-/** COG reads are network-bound and memory-hungry; keep a few in flight per process. */
-const cogSlots = new Semaphore(4);
+/**
+ * COG reads are network-bound and memory-hungry; keep a few in flight per process, and a short waiting
+ * line: past it a caller gets 503 with Retry-After rather than waiting behind hundreds of reads.
+ */
+const cogSlots = new Semaphore(4, 24, () => new HttpError(503, "The server is busy reading satellite images; try again in a moment", { retryAfterSeconds: 15 }));
 
 export interface SceneParts {
   zone: number;

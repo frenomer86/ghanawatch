@@ -36,15 +36,26 @@ export class TtlCache<V> {
   }
 }
 
-/** Limit concurrent heavy work (COG reads) per process; extra callers wait their turn. */
+/**
+ * Limit concurrent heavy work (COG reads) per process; extra callers wait their turn. With `maxQueue`, a
+ * caller arriving when that many are already waiting gets the error from `busy` (the routes pass a 503 with
+ * Retry-After) instead of joining a line that grows without end and holds every request open.
+ */
 export class Semaphore {
   private active = 0;
   private queue: Array<() => void> = [];
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly maxQueue = Number.POSITIVE_INFINITY,
+    private readonly busy: () => Error = () => new Error("busy"),
+  ) {}
 
   async run<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.active >= this.limit) await new Promise<void>((resolve) => this.queue.push(resolve));
+    if (this.active >= this.limit) {
+      if (this.queue.length >= this.maxQueue) throw this.busy();
+      await new Promise<void>((resolve) => this.queue.push(resolve));
+    }
     this.active++;
     try {
       return await fn();

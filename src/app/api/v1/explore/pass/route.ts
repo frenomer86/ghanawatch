@@ -20,6 +20,8 @@ export const GET = handle(async (req: NextRequest) => {
   try {
     frame = await renderPass(q.scene, q.lon, q.lat);
   } catch (e) {
+    // "Busy" (503 with Retry-After) passes through as it is; anything else is the upstream file failing.
+    if (e instanceof HttpError) throw e;
     console.error("[explore/pass]", q.scene, e instanceof Error ? e.message : e);
     throw new HttpError(502, "This satellite pass could not be read");
   }
