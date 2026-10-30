@@ -10,3 +10,5 @@ playwright-report
 .git
 .claude
 docs/preview
+research/**/results/cache
+research/**/results/*.pt
