@@ -2,9 +2,10 @@
 # Build:  docker build -t ghanawatch .
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-# .npmrc carries onnxruntime-node-install=skip: without it the optional onnxruntime-node fails its GPU
-# postinstall and is silently dropped from the image.
-COPY package.json package-lock.json .npmrc ./
+# Without this the optional onnxruntime-node (detector 3.0) fails its GPU download at install and is silently
+# dropped from the image; its CPU runtime ships inside the package.
+ENV ONNXRUNTIME_NODE_INSTALL=skip
+COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 FROM node:22-bookworm-slim AS build

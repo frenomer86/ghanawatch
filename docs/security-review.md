@@ -85,8 +85,9 @@ deep), so it was not reviewed.
 | 15 | Info | `deploy/Caddyfile` | `X-Middleware-Rewrite` (the internal `/en/...` path) reached visitors. | Removed at Caddy (`X-GW-Offline` is kept on purpose: the service worker reads it). | Config review |
 | 16 | Info | `src/app/icons/[name]/route.ts` | The manifest's three icons did not exist: every page logged a 404 (Lighthouse best practices 96). | Icons drawn from the GhanaWatch mark at the same URLs. | `security-pages`: "serves each icon as a PNG of the right size and nothing else" |
 
-Also on request from the detector work: the Docker deps stage now copies `.npmrc` (so `npm ci` honours
-`onnxruntime-node-install=skip`) and `.dockerignore` leaves out `research/**/results/cache` and `*.pt`.
+Also on request from the detector work: the Docker deps stage sets `ONNXRUNTIME_NODE_INSTALL=skip` (so `npm ci`
+keeps the optional onnxruntime-node without its GPU download) and `.dockerignore` leaves out
+`research/**/results/cache` and `*.pt`.
 
 ## Checked and sound
 

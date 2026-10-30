@@ -92,7 +92,9 @@ edge, NIR from B8A), radar only, random cloud holes inside a patch; and 20% of b
 on training patches, and the training base rate is recorded; the tracker uses both.
 
 **Export.** ONNX, weights stored as float16 with a cast to float32 (half the file; computation in float32).
-Runs with `onnxruntime-node`, an optional dependency of the pipeline image (`.npmrc` skips its GPU download).
+Runs with `onnxruntime-node`, an optional dependency of the pipeline image (`ONNXRUNTIME_NODE_INSTALL=skip` in
+the Dockerfile and in `.npmrc` skips its GPU download). On a machine that does not run the record, `npm install
+--omit=optional` leaves it out altogether.
 Large grids are cut into overlapping 128-pixel tiles blended with a tent weight.
 
 ## 5. Tracker (`ts/tracker.ts`)
