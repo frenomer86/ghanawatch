@@ -20,5 +20,8 @@
 		-X-Nextjs-Stale-Time
 		-X-Nextjs-Postponed
 		-X-Nextjs-Matched-Path
+		# The internal locale rewrite (e.g. "/en/districts") the proxy adds.
+		-X-Middleware-Rewrite
+		# X-GW-Offline must stay: public/sw.js reads it to keep staff pages out of the offline cache.
 	}
 }
