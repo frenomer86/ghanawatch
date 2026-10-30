@@ -221,7 +221,6 @@ export async function toEvents(r: CellMonthResult, now: Date, fetchJson: <T>(url
     const geom = sitePolygon(r, s);
     const centre = centroidOf(geom);
     const sourceEventId = siteId(r, s);
-    const id = stableId("event", `${SLUG}:${sourceEventId}`);
     const confidence = confidenceOf(s, centre.lat);
     const north = centre.lat > 8.0;
     const ha = s.areaHa;
