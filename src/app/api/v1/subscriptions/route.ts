@@ -8,7 +8,7 @@ import { slugify } from "@/lib/domain/scorecards";
 import { env } from "@/lib/server/env";
 import { assertSameOrigin, clientIpHash, enforceRateLimit, handle, HttpError, json, parseJson } from "@/lib/server/http";
 import { uuidv7 } from "@/lib/server/ids";
-import { mailConfigured, sendMail } from "@/lib/server/mail";
+import { allowConfirmationMail, mailConfigured, sendMail } from "@/lib/server/mail";
 
 /**
  * POST /api/v1/subscriptions { email, district?, list? }
@@ -27,26 +27,29 @@ export const POST = handle(async (req: NextRequest) => {
     if (!d) throw new HttpError(404, "No such district");
     districtId = d.id;
   }
-  const [existing] = toRows<{ id: string; token: string; confirmed_at: string | null }>(
-    await db.execute(sql`select id::text, token, confirmed_at::text from alert_subscriptions where lower(email) = ${body.email} and district_id is not distinct from ${districtId}::uuid and unsubscribed_at is null limit 1`),
+  const [existing] = toRows<{ id: string; confirmed_at: string | null }>(
+    await db.execute(sql`select id::text, confirmed_at::text from alert_subscriptions where lower(email) = ${body.email} and district_id is not distinct from ${districtId}::uuid and unsubscribed_at is null limit 1`),
   );
   // Without a mail service no address can be verified, so none is taken: an unverified list would
   // start receiving mail the day the service is switched on.
   if (!mailConfigured()) throw new HttpError(503, "Email alerts are not available yet; follow the WhatsApp channel or the RSS feed meanwhile");
-  const token = existing?.token ?? randomBytes(24).toString("base64url");
-  if (!existing) {
-    await db.insert(alertSubscriptions).values({ id: uuidv7(), email: body.email, districtId, list: body.list, token, confirmedAt: null, ipHash: clientIpHash(req) });
-  }
   const origin = env().PUBLIC_ORIGIN;
   // An address already confirmed gets no second email, but the answer, and the time it takes, is the
   // same either way: the mail goes out after the response, so the endpoint never tells a caller whether
-  // an address is on the list.
-  if (!existing?.confirmed_at) {
+  // an address is on the list. Each confirmation email carries a fresh token (an unconfirmed request
+  // asked again gets a new one and its clock restarts; /confirm refuses tokens older than 7 days), and
+  // at most a few go to one address a day, so the form cannot be used to flood a stranger's inbox.
+  // When the address has had its share of emails for the day nothing changes, so the link it already
+  // holds keeps working.
+  if (!existing?.confirmed_at && allowConfirmationMail(body.email)) {
+    const token = randomBytes(24).toString("base64url");
+    if (existing) await db.execute(sql`update alert_subscriptions set token = ${token}, created_at = now(), ip_hash = ${clientIpHash(req)} where id = ${existing.id}::uuid and confirmed_at is null`);
+    else await db.insert(alertSubscriptions).values({ id: uuidv7(), email: body.email, districtId, list: body.list, token, confirmedAt: null, ipHash: clientIpHash(req) });
     after(() =>
       sendMail({
         to: body.email,
         subject: "Confirm your GhanaWatch alerts",
-        text: `Confirm to receive GhanaWatch's weekly galamsey digest${body.district ? ` for ${body.district}` : ""}:\n${origin}/api/v1/subscriptions/confirm?token=${token}\n\nIf you did not ask for this, ignore this email.`,
+        text: `Confirm to receive GhanaWatch's weekly galamsey digest${body.district ? ` for ${body.district}` : ""}:\n${origin}/api/v1/subscriptions/confirm?token=${token}\n\nThe link works for 7 days. If you did not ask for this, ignore this email.`,
       }).catch((e: unknown) => console.error("[subscriptions] confirmation mail failed", e instanceof Error ? e.message : e)),
     );
   }

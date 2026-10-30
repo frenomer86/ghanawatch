@@ -30,6 +30,6 @@ export const POST = handle(async (req: NextRequest) => {
   const token = tokenQuery.shape.token.safeParse(await postedToken(req));
   if (!token.success) throw new HttpError(400, "Invalid token");
   const db = await getDb();
-  await db.execute(sql`update alert_subscriptions set unsubscribed_at = now() where token = ${token.data}`);
+  await db.execute(sql`update alert_subscriptions set unsubscribed_at = now() where token = ${token.data} and unsubscribed_at is null`);
   return NextResponse.redirect(new URL("/alerts?unsubscribed=1", env().PUBLIC_ORIGIN), 303);
 });

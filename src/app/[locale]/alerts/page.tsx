@@ -50,6 +50,7 @@ async function Notice({ searchParams }: { searchParams: PageProps<"/[locale]/ale
   const sp = await searchParams;
   if (sp.subscribed) return <p className="mt-3 rounded-md bg-forest-50 p-3 text-sm text-forest-900">Your subscription is confirmed.</p>;
   if (sp.unsubscribed) return <p className="mt-3 rounded-md bg-muted p-3 text-sm">You are unsubscribed.</p>;
+  if (sp.expired) return <p className="mt-3 rounded-md bg-muted p-3 text-sm">That confirmation link has expired or was replaced by a newer one. Subscribe again below to get a fresh link.</p>;
   return null;
 }
 

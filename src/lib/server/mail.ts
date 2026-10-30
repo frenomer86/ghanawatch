@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { rateLimit } from "./http";
+
 /**
  * Transactional email through Brevo's REST API (free tier: 300 emails a day), used for the weekly digest
  * and subscription confirmations. Without BREVO_API_KEY nothing is sent and callers are told so; the
@@ -29,6 +32,28 @@ export async function sendMail(m: Mail): Promise<boolean> {
   return res.ok;
 }
 
+/** Escapes text for HTML or XML, element content and quoted attribute values alike. */
 export function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/** Characters XML 1.0 forbids anywhere in a document (C0 controls other than tab and newlines, lone surrogates, U+FFFE/U+FFFF). */
+export function stripXmlInvalid(s: string): string {
+  return s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+}
+
+/** Confirmation emails per address per day, and in all per day (the Brevo free tier sends 300 a day, digest included). */
+export const CONFIRMATION_MAILS_PER_ADDRESS = 3;
+export const CONFIRMATION_MAILS_PER_DAY = 150;
+
+/**
+ * Whether one more subscription-confirmation email may go out to this address. Anyone can type someone
+ * else's address into the sign-up form, from any number of networks; without a per-address ceiling that
+ * is a way to flood a stranger's inbox, and without a daily ceiling it spends the day's sending quota so
+ * the weekly digest itself cannot go out.
+ */
+export function allowConfirmationMail(email: string): boolean {
+  const addr = createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+  if (!rateLimit(`confirm-mail:${addr}`, CONFIRMATION_MAILS_PER_ADDRESS, 86_400_000).ok) return false;
+  return rateLimit("confirm-mail:all", CONFIRMATION_MAILS_PER_DAY, 86_400_000).ok;
 }

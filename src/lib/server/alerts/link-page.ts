@@ -1,3 +1,4 @@
+import { readBody } from "@/lib/server/http";
 import { escapeHtml } from "@/lib/server/mail";
 
 /**
@@ -16,17 +17,18 @@ export function linkPage(opts: { title: string; body: string; button: string; ac
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'" } });
 }
 
-/** The token from a posted form or a JSON body. */
+/**
+ * The token from a posted form or a JSON body. The body is read through a 4 KB ceiling (413 past it), so
+ * a large or endless upload is cut off instead of being buffered whole before its size is looked at.
+ */
 export async function postedToken(req: Request): Promise<string | null> {
   const ct = (req.headers.get("content-type") ?? "").toLowerCase();
   if (ct.startsWith("application/x-www-form-urlencoded")) {
-    const text = await req.text();
-    if (text.length > 4096) return null;
+    const text = new TextDecoder().decode(await readBody(req, 4096));
     return new URLSearchParams(text).get("token");
   }
   if (ct.startsWith("application/json")) {
-    const text = await req.text();
-    if (text.length > 4096) return null;
+    const text = new TextDecoder().decode(await readBody(req, 4096));
     try {
       const v = (JSON.parse(text) as { token?: unknown }).token;
       return typeof v === "string" ? v : null;
