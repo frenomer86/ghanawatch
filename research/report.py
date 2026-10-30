@@ -67,12 +67,24 @@ def main():
         import collections
         by = collections.defaultdict(list)
         for c in cov: by[c["month"][5:7]].append(c)
-        L += ["## 4. Which sensor saw the ground, by calendar month (evaluation blocks, 2019-07 to 2022-01)", "",
+        months = sorted(c["month"] for c in cov)
+        L += [f"## 4. Which sensor saw the ground, by calendar month (evaluation blocks, {months[0]} to {months[-1]})", "",
               "Share of pixels whose month was observed by Sentinel-2, by Landsat only, by radar only, or not at all. The old detector used Sentinel-2 alone.", "",
               "| Month | Sentinel-2 | Landsat only | Radar only | Nothing |", "|---|---|---|---|---|"]
         for mo in sorted(by):
             v = by[mo]; avg = lambda k: sum(x[k] for x in v) / len(v)
             L.append(f"| {mo} | {avg('sentinel2'):.0%} | {avg('landsat'):.0%} | {avg('radarOnly'):.0%} | {avg('none'):.0%} |")
+        L.append("")
+    sp = os.path.join(RES, "gbm_spatial_cv.json")
+    if os.path.exists(sp):
+        s = json.load(open(sp))
+        L += ["## 3b. Spatial cross-validation (does it transfer to ground it has never seen?)", "",
+              f"All SmallMinesDS patches of both years grouped into {s['squaresKm']:.0f} km squares ({s['squares']} squares), {s['folds']} folds by square, so no test pixel has a training pixel within the same square; gradient boosting on the full feature set (24 channels and local texture). The pooled figure sits beside the same model on the official random split (section 1, last row).", "",
+              "| Fold | IoU | Precision | Recall | F1 |", "|---|---|---|---|---|"]
+        for i, v in enumerate(s["perFold"], 1):
+            L.append(f"| {i} | {f(v['IoU'])} | {f(v['precision'])} | {f(v['recall'])} | {f(v['F1'])} |")
+        v = s["pooled"]
+        L.append(f"| **pooled** | **{f(v['IoU'])}** | {f(v['precision'])} | {f(v['recall'])} | **{f(v['F1'])}** |")
         L.append("")
     meta = os.path.join(RES, "unet_meta.json")
     if os.path.exists(meta):

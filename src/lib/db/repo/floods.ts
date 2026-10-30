@@ -105,3 +105,36 @@ export async function waterwayEncroachments(limit = 24): Promise<{ items: Waterw
   );
   return { items, counts };
 }
+
+export interface RadarFlood {
+  id: string;
+  district: string | null;
+  slug: string | null;
+  areaHa: number;
+  date: string;
+  severity: string;
+  trigger: string | null;
+}
+
+/** Land seen under water by radar after a flood forecast or report (pipeline adapter s1-flood), newest first. */
+export async function radarFloods(days = 30, limit = 12): Promise<{ items: RadarFlood[]; totalHa: number; districts: number }> {
+  const db = await getDb();
+  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  const rows = toRows<{ id: string; district: string | null; area_ha: number | null; date: string; severity: string; trigger: string | null }>(
+    await db.execute(sql`
+      select e.id::text, d.name as district, e.area_ha, e.image_date::text as date, e.severity, e.properties #>> '{trigger,kind}' as trigger
+      from change_events e left join admin_boundaries d on d.id = e.district_id
+      where e.status <> 'dismissed' and e.type = 'flood_risk' and e.properties->>'signature' = 'radar_flood' and e.image_date >= ${since}
+      order by e.image_date desc, e.area_ha desc nulls last`),
+  );
+  const items = rows.slice(0, limit).map((r) => ({
+    id: r.id,
+    district: r.district,
+    slug: r.district ? slugify(r.district) : null,
+    areaHa: Number(r.area_ha ?? 0),
+    date: r.date,
+    severity: r.severity,
+    trigger: r.trigger,
+  }));
+  return { items, totalHa: Math.round(rows.reduce((a, r) => a + Number(r.area_ha ?? 0), 0)), districts: new Set(rows.map((r) => r.district).filter(Boolean)).size };
+}

@@ -1,9 +1,9 @@
-import { and, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { changeEvents } from "@/lib/db/schema";
 import type { ChangeType, ReportCategory } from "@/lib/domain/types";
 import type { SatelliteCheck } from "@/lib/domain/cases";
-import { haversineKm } from "@/lib/geo";
+import { haversineKm, pointInPolygon } from "@/lib/geo";
 import { highResCaptures } from "@/lib/server/explore/wayback";
 
 /**
@@ -56,8 +56,31 @@ export async function satelliteCheck(lon: number, lat: number, category: ReportC
       ),
     )
     .limit(200);
+  // A flood outline seen by radar can be kilometres across: a report inside one is on it, however far its centre.
+  const floods = MATCHING_TYPES[category].includes("flood_risk")
+    ? (
+        await db
+          .select({ id: changeEvents.id, type: changeEvents.type, title: changeEvents.titleEn, severity: changeEvents.severity, imageDate: changeEvents.imageDate, geom: changeEvents.geom })
+          .from(changeEvents)
+          .where(
+            and(
+              eq(changeEvents.type, "flood_risk"),
+              sql`${changeEvents.properties}->>'signature' = 'radar_flood'`,
+              ne(changeEvents.status, "dismissed"),
+              gte(changeEvents.imageDate, since),
+              lte(changeEvents.bboxMinLon, lon),
+              gte(changeEvents.bboxMaxLon, lon),
+              lte(changeEvents.bboxMinLat, lat),
+              gte(changeEvents.bboxMaxLat, lat),
+            ),
+          )
+          .limit(50)
+      )
+        .filter((r) => r.geom && (r.geom.type === "Polygon" || r.geom.type === "MultiPolygon") && pointInPolygon([lon, lat], r.geom))
+        .map((r) => ({ id: r.id, type: r.type as ChangeType, title: r.title, severity: r.severity, imageDate: r.imageDate, distanceM: 0 }))
+    : [];
   const detections = rows
-    .filter((r) => r.lon != null && r.lat != null)
+    .filter((r) => r.lon != null && r.lat != null && !floods.some((f) => f.id === r.id))
     .map((r) => ({
       id: r.id,
       type: r.type as ChangeType,
@@ -67,6 +90,7 @@ export async function satelliteCheck(lon: number, lat: number, category: ReportC
       distanceM: Math.round(haversineKm({ lon, lat }, { lon: r.lon!, lat: r.lat! }) * 1000),
     }))
     .filter((r) => r.distanceM <= CHECK_RADIUS_M)
+    .concat(floods)
     .sort((a, b) => a.distanceM - b.distanceM)
     .slice(0, 5);
 

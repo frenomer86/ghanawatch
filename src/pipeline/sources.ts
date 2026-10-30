@@ -166,6 +166,21 @@ export const SOURCE_REGISTRY: SourceDef[] = [
     connection: "live",
   },
   {
+    slug: "s1-flood",
+    name: "Flooding seen by radar",
+    provider: "GhanaWatch (KNUST), from Copernicus Sentinel-1 radar terrain-corrected by Microsoft Planetary Computer",
+    url: "https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc",
+    docUrl: "https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc",
+    category: "flood",
+    description:
+      "Where water actually went. When a river is forecast to reach its flood level, very heavy rain is forecast, or the public reports a flood, every Sentinel-1 radar pass over the place in the following week is compared with the same weeks a year earlier, through the cloud that comes with floods. Land that has turned to open water is outlined (10 ha or more), on the flood map and as evidence for flood reports. Outlines inside known mining sites are left out, since new mining ponds look the same.",
+    licence: "Free, full and open access under the Copernicus Sentinel Data Terms and Conditions",
+    attributionText: "Contains modified Copernicus Sentinel data, processed by Microsoft Planetary Computer and GhanaWatch",
+    cadence: "Every radar pass (about every 6 days) in the week after a flood forecast or report",
+    resolutionM: 40,
+    connection: "live",
+  },
+  {
     slug: "copernicus-glofas",
     name: "Copernicus GloFAS",
     provider: "Copernicus Emergency Management Service (ECMWF / JRC)",

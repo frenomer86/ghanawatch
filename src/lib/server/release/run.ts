@@ -189,7 +189,8 @@ function gitCommit(): string | null {
 }
 
 /**
- * Draws SAMPLE_SIZE sites first seen in the month at random (once), reports its state, and dismisses the
+ * Draws SAMPLE_SIZE sites the month's index counts at random (once): first seen in the month (two-date scan) or
+ * adding ground confirmed in the month (multi-sensor record); reports the sample's state, and dismisses the
  * sites a moderator rejected so the index close that follows leaves them out.
  */
 export async function ensureSample(month: string, log: (s: string) => void) {
@@ -198,10 +199,16 @@ export async function ensureSample(month: string, log: (s: string) => void) {
   if (Number(have?.n ?? 0) === 0) {
     const picks = toRows<{ id: string }>(
       await db.execute(sql`
-        select id::text from change_events
+        select id::text from change_events e
         where status <> 'dismissed' and confidence in ('medium', 'high') and properties->'placement'->>'mine' is null and not (properties ? 'licensedMine')
-          and to_char(coalesce(first_image_date, image_date), 'YYYY-MM') = ${month}
-          and ((method_version like 's2-galamsey-%' and properties->>'signature' in ('new_pits', 'cleared_with_pits', 'mining')) or method_version like 's1-water-%')
+          and (
+            -- Two-date scan and radar ponds: sites first seen in the month.
+            (to_char(coalesce(first_image_date, image_date), 'YYYY-MM') = ${month}
+              and ((method_version like 's2-galamsey-2.%' and properties->>'signature' in ('new_pits', 'cleared_with_pits')) or method_version like 's1-water-%'))
+            -- Multi-sensor record: sites that added ground confirmed in the month (what the index counts).
+            or (method_version like 's2-galamsey-3.%' and exists (
+              select 1 from history_events h where h.source_event_id = e.source_event_id and h.scan_month = ${month}
+                and h.method_version like 's2-galamsey-3.%' and h.properties->>'cohort' = 'true')))
         order by md5(id::text || ${month}) limit ${SAMPLE_SIZE}`),
     );
     if (picks.length) await db.insert(confirmationSamples).values(picks.map((p) => ({ id: uuidv7(), month, changeEventId: p.id })));

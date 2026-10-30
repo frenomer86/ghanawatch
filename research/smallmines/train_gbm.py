@@ -2,7 +2,7 @@
 
 Every configuration is trained on the official training patches (both years) and scored on the official
 test patches, pixel-wise for the mining class, so the numbers sit beside Table I of Ofori-Ampofo et al.
-(2025). A spatially blocked score (10 km squares held out) is reported too, since neighbouring 1.28 km
+(2025). A spatially blocked score (20 km squares held out, `spatial`) is reported too, since neighbouring 1.28 km
 patches share mines and the official split is random.
 
     python3 train_gbm.py            # ablation table -> results/gbm_ablation.json

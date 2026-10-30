@@ -50,13 +50,23 @@ export function floodMask(event: Float32Array, dry: Float32Array): Uint8Array {
   return out;
 }
 
-export async function floodExtent(fetchJson: FetchJson, lon: number, lat: number, eventDate: Date): Promise<FloodExtent | null> {
+/** The square the flood check looks at around a place (FLOOD_RULES.halfKm each way). */
+export function floodBox(lon: number, lat: number): [number, number, number, number] {
   const r = FLOOD_RULES;
   const dLon = r.halfKm / (111.32 * Math.cos((lat * Math.PI) / 180));
   const dLat = r.halfKm / 110.57;
-  const bbox: [number, number, number, number] = [lon - dLon, lat - dLat, lon + dLon, lat + dLat];
+  return [lon - dLon, lat - dLat, lon + dLon, lat + dLat];
+}
+
+/**
+ * `passes`, when given, are the event passes to use (for example one pass after a forecast flood, live);
+ * otherwise every pass within FLOOD_RULES.windowDays of the date is searched for (past events).
+ */
+export async function floodExtent(fetchJson: FetchJson, lon: number, lat: number, eventDate: Date, passes?: RadarScene[]): Promise<FloodExtent | null> {
+  const r = FLOOD_RULES;
+  const bbox = floodBox(lon, lat);
   const day = 86_400_000;
-  const eventScenes = await searchRadar(fetchJson, { bbox }, new Date(eventDate.getTime() - r.windowDays * day), new Date(eventDate.getTime() + r.windowDays * day));
+  const eventScenes = passes ?? (await searchRadar(fetchJson, { bbox }, new Date(eventDate.getTime() - r.windowDays * day), new Date(eventDate.getTime() + r.windowDays * day)));
   if (!eventScenes.length) return null;
   // Baseline: the same weeks a year earlier. In the savannah the dry season is darker than the wet season
   // (bare dry soil), so a dry-season baseline hides floods; the same season a year before compares like with like.

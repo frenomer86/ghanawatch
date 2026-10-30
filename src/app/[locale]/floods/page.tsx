@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
-import { CloudRain, MapIcon, Waves } from "lucide-react";
+import { CloudRain, MapIcon, Radar, Waves } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiverWatch } from "@/components/home/river-watch";
-import { rainOutlook, rainLevel, RAIN_LEVELS, waterwayEncroachments } from "@/lib/db/repo/floods";
+import { radarFloods, rainOutlook, rainLevel, RAIN_LEVELS, waterwayEncroachments } from "@/lib/db/repo/floods";
 import { listPublicCases } from "@/lib/db/repo/cases";
 import type { Locale } from "@/lib/domain/types";
 
@@ -17,7 +17,8 @@ export const metadata: Metadata = { title: "Floods and waterways" };
 
 /**
  * Floods and waterways for all of Ghana: the next three days of rain in every district, river flood
- * forecasts, flood-prone land on the map, and flood reports from the public.
+ * forecasts, land seen under water by radar after a forecast or report, flood-prone land on the map, and
+ * flood reports from the public.
  */
 export default async function FloodsPage({ params }: PageProps<"/[locale]/floods">) {
   const locale = resolveLocale((await params).locale);
@@ -27,8 +28,8 @@ export default async function FloodsPage({ params }: PageProps<"/[locale]/floods
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-semibold">Floods and waterways</h1>
         <p className="mt-2 max-w-[70ch] text-lg text-ink-soft">
-          Heavy rain coming in the next three days, rivers forecast to rise, land that has flooded before, and flood reports from the public, for
-          every district of Ghana.
+          Heavy rain coming in the next three days, rivers forecast to rise, land radar has seen under water, land that has flooded before, and
+          flood reports from the public, for every district of Ghana.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button asChild>
@@ -46,6 +47,9 @@ export default async function FloodsPage({ params }: PageProps<"/[locale]/floods
           <div className="min-w-0 space-y-12">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <RainOutlook locale={locale} />
+            </Suspense>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <RadarFloods locale={locale} />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <Encroachments locale={locale} />
@@ -153,6 +157,65 @@ async function RainOutlook({ locale }: { locale: Locale }) {
         Forecast for the centre of each district; storms are local and can fall short of it or exceed it. Heavy: {RAIN_LEVELS.heavy} mm or more in a
         day; very heavy: {RAIN_LEVELS.veryHeavy} mm; extreme: {RAIN_LEVELS.extreme} mm. Weather data by Open-Meteo.com.
       </p>
+    </section>
+  );
+}
+
+const TRIGGER_LABEL: Record<string, string> = { "river-forecast": "after a river flood forecast", "rain-forecast": "after very heavy rain", report: "after a public report" };
+const SEV_CLS: Record<string, string> = { urgent: "bg-sev-urgent-tint text-sev-urgent", elevated: "bg-sev-elevated-tint text-sev-elevated", watch: "bg-sev-watch-tint text-sev-watch" };
+
+async function RadarFloods({ locale }: { locale: Locale }) {
+  await connection();
+  const f = await getFormatter({ locale });
+  const { items, totalHa, districts } = await radarFloods(30, 12);
+  const date = (iso: string) => f.dateTime(new Date(`${iso}T12:00:00Z`), { day: "numeric", month: "short", timeZone: "UTC" });
+  return (
+    <section>
+      <h2 className="flex items-center gap-2 text-2xl font-semibold">
+        <Radar className="size-6 text-sky-700" aria-hidden />
+        Seen under water by radar
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {items.length
+          ? `In the last 30 days Sentinel-1 radar saw about ${totalHa.toLocaleString("en-GB")} ha of land under water in ${districts} ${districts === 1 ? "district" : "districts"}, land that was dry in the same weeks a year earlier.`
+          : "No flooding has been seen by radar in the last 30 days."}{" "}
+        After every river flood forecast, very heavy rain forecast or approved flood report, each radar pass of the following week is checked; radar
+        sees through the cloud that comes with floods. Flooded forest and tall crops can stay bright, so these outlines are the least that flooded.
+      </p>
+      {items.length > 0 && (
+        <div className="mt-4 overflow-x-auto focus-visible:outline-2 focus-visible:outline-ring" tabIndex={0} role="region" aria-label="Flooding seen by radar">
+          <table className="gw-table w-full min-w-0 text-sm">
+            <thead>
+              <tr>
+                <th>Where</th>
+                <th>Radar pass</th>
+                <th className="text-right">Under water</th>
+                <th>Why it was checked</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    <Link href={`/event/${e.id}`} className="text-link underline">
+                      {e.district ?? "Ghana"}
+                    </Link>
+                  </td>
+                  <td className="tabular-nums">{date(e.date)}</td>
+                  <td className="text-right tabular-nums">
+                    {e.areaHa >= 10 ? Math.round(e.areaHa).toLocaleString("en-GB") : e.areaHa.toFixed(1)} ha
+                    {SEV_CLS[e.severity] && e.severity !== "watch" && (
+                      <span className={`mt-1 ml-auto block w-fit rounded-full px-1.5 py-0.5 text-xs font-medium ${SEV_CLS[e.severity]}`}>{e.severity === "urgent" ? "Large" : "Wide"}</span>
+                    )}
+                  </td>
+                  <td className="text-muted-foreground">{TRIGGER_LABEL[e.trigger ?? ""] ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">Contains modified Copernicus Sentinel-1 data, processed by Microsoft Planetary Computer and GhanaWatch.</p>
     </section>
   );
 }

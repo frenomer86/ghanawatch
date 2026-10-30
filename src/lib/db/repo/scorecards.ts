@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb, rows as toRows } from "../client";
+import { FIRST_CONFIRMED } from "@/lib/server/index/first-confirmed";
 import {
   buildDistrictCards,
   buildReserveCards,
@@ -74,8 +75,11 @@ export async function loadEvents(): Promise<ScoreEventRow[]> {
         (coalesce(properties->'placement'->>'inResidential', 'false') = 'true'
           or exists (select 1 from jsonb_array_elements(coalesce(properties->'placement'->'nearby', '[]'::jsonb)) x
             where x->>'kind' in ('school', 'cemetery', 'health') and (x->>'distanceM')::int <= 300)) as near,
-        detected_at, created_at, coalesce(first_image_date, image_date) as seen_on
+        detected_at, created_at,
+        case when method_version like 's2-galamsey-3.%' then coalesce(to_date(fc.m || '-01', 'YYYY-MM-DD'), created_at::date)
+          else coalesce(first_image_date, image_date) end as seen_on
       from change_events
+      left join ${FIRST_CONFIRMED} fc on fc.source_event_id = change_events.source_event_id and change_events.method_version like 's2-galamsey-3.%'
       where status <> 'dismissed' and district_id is not null`),
   );
   return rows.map((r) => ({
@@ -91,7 +95,8 @@ export async function loadEvents(): Promise<ScoreEventRow[]> {
     nearPeople: Boolean(r.near),
     detectedAt: new Date(r.detected_at),
     // The first satellite date the site was seen (never moved forward by a rescan), so a site re-seen this
-    // month is not counted as new this month.
+    // month is not counted as new this month. For the multi-sensor record: the month it was first confirmed
+    // (its onset, when mining began, is usually months earlier), or the day it was first published.
     firstSeen: new Date(r.seen_on ?? r.created_at),
   }));
 }

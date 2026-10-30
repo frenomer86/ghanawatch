@@ -15,6 +15,7 @@ import { glofasAdapter } from "./adapters/glofas";
 import { sentinel2Adapter } from "./adapters/sentinel2";
 import { sentinel1Adapter } from "./adapters/sentinel1";
 import { timeseriesAdapter } from "./adapters/timeseries";
+import { radarFloodAdapter } from "./adapters/radar-flood";
 import { seedSources } from "./seed/sources";
 import { forestLossAdapter } from "./adapters/forest-loss";
 import { gfwAlertsAdapter } from "./adapters/gfw-alerts";
@@ -37,7 +38,7 @@ import { markLicensed } from "./context/licensed";
  * provider failing never blocks the others; every outcome is written to
  * pipeline_runs where the Data Sources page and /api/v1/freshness read it.
  */
-const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, forestLossAdapter];
+const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, radarFloodAdapter, forestLossAdapter];
 
 async function main() {
   loadEnv({ path: ".env.local" });

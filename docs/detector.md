@@ -113,6 +113,14 @@ and an anchor (the centre of its earliest pixels) that names it stably as it gro
 - `history_events`: for each finished month, one row per site that grew, with the area newly confirmed that
   month (`properties.cohort = true`). Written once; this is what the index counts.
 
+**When a site counts as first seen.** A site's onset is when mining began, usually months before the evidence
+was enough to confirm it. Everywhere the platform says "first seen" or "new" (the weekly digest, the district
+cards' new-this-month line, the monthly confirmation sample), a 3.0 site is dated by the month its record first
+confirmed it (its earliest history row, `lib/server/index/first-confirmed.ts`), or the day it was first
+published if it has no history row yet (the month in progress). So when a cell's detections are published for
+the first time after its history was built, its old sites are not announced as new
+(`tests/integration/detector-dates.test.ts`).
+
 ## 7. Galamsey Index 2.0 (`lib/domain/index.ts`, `lib/domain/sites.ts`)
 
 New hectares in a month = the area newly confirmed that month (new sites and the spread of existing ones).

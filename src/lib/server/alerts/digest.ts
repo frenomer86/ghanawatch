@@ -1,13 +1,15 @@
 import { sql } from "drizzle-orm";
 import { getDb, rows as toRows } from "@/lib/db/client";
 import { alertDigests } from "@/lib/db/schema";
+import { FIRST_CONFIRMED } from "@/lib/server/index/first-confirmed";
 import { scoreKind, slugify } from "@/lib/domain/scorecards";
 import { env } from "@/lib/server/env";
 import { uuidv7 } from "@/lib/server/ids";
 import { mailConfigured, sendMail } from "@/lib/server/mail";
 
 /**
- * The weekly digest: every likely galamsey site first seen in the last seven days, grouped by district,
+ * The weekly digest: every likely galamsey site first seen in the last seven days (for the multi-sensor record,
+ * first published: its onset is months earlier, when mining began), grouped by district,
  * each linking to its evidence page. Written once per week (alert_digests), posted to the WhatsApp
  * channel by hand from the text, served as RSS and JSON, and emailed to confirmed subscribers (the
  * national digest, or only their district).
@@ -48,14 +50,22 @@ export async function buildDigest(weekEnding: Date): Promise<Digest> {
   const since = new Date(weekEnding.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
   const rows = toRows<{ id: string; title: string; ha: number; first: string; reserve: string | null; district_id: string; district: string; region: string | null; type: string; method_version: string; sig: string | null; confidence: string }>(
     await db.execute(sql`
-      select e.id::text, e.title_en as title, coalesce(e.area_ha, 0)::float ha, coalesce(e.first_image_date, e.image_date)::text as first,
+      with seen as (
+        select e.*, case when e.method_version like 's2-galamsey-3.%' then e.created_at::date else coalesce(e.first_image_date, e.image_date) end as first_seen, fc.m as first_confirmed
+        from change_events e
+        left join ${FIRST_CONFIRMED} fc on fc.source_event_id = e.source_event_id and e.method_version like 's2-galamsey-3.%'
+      )
+      select e.id::text, e.title_en as title, coalesce(e.area_ha, 0)::float ha, e.first_seen::text as first,
         e.properties->'placement'->>'protectedArea' reserve, d.id::text as district_id, d.name as district, r.name as region,
         e.type, e.method_version, e.properties->>'signature' sig, e.confidence
-      from change_events e
+      from seen e
       join admin_boundaries d on d.id = e.district_id
       left join admin_boundaries r on r.id = d.parent_id
       where e.status <> 'dismissed' and e.properties->'placement'->>'mine' is null and not (e.properties ? 'licensedMine')
-        and coalesce(e.first_image_date, e.image_date) > ${since}::date and coalesce(e.first_image_date, e.image_date) <= ${end}::date
+        and e.first_seen > ${since}::date and e.first_seen <= ${end}::date
+        -- A multi-sensor site is new when first published, unless its record confirmed it long before (a cell whose
+        -- detections were published for the first time after its history was built).
+        and (e.first_confirmed is null or e.first_confirmed >= to_char(e.created_at - interval '40 days', 'YYYY-MM'))
         and (e.method_version like 's2-galamsey-%' or e.method_version like 's1-water-%')
       order by e.area_ha desc nulls last`),
   );
