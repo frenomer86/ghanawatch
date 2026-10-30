@@ -29,7 +29,7 @@ export const GET = handle(async (req: NextRequest, ctx) => {
     if (!res.ok) throw new HttpError(404, "Photo not found");
     body = await res.arrayBuffer();
   } else {
-    const dir = path.join(process.cwd(), env().DATA_DIR, "uploads");
+    const dir = path.resolve(process.cwd(), env().DATA_DIR, "uploads");
     const file = path.join(dir, row.key);
     const rel = path.relative(dir, file);
     if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) throw new HttpError(404, "Photo not found");

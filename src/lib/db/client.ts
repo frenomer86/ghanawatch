@@ -44,7 +44,7 @@ async function open(): Promise<Db> {
     });
     return drizzlePostgres(client, { schema, casing: "snake_case" });
   }
-  const dir = path.join(process.cwd(), e.DATA_DIR, "pglite");
+  const dir = path.resolve(process.cwd(), e.DATA_DIR, "pglite"); // DATA_DIR may be relative (default) or absolute
   fs.mkdirSync(dir, { recursive: true });
   const client = new PGlite(dir);
   const db = drizzlePglite(client, { schema, casing: "snake_case" });

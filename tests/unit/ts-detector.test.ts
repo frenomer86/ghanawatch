@@ -123,6 +123,18 @@ describe("temporal tracker", () => {
     expect(monthName(s.onset[0])).toBe("2019-01");
   });
 
+  it("dates onset from the first month that favours mining; a weak radar-only month does not restart it", () => {
+    const s = newState(1);
+    const months: Array<[number, number]> = [[0.9, REGIME.sentinel2], [0.03, REGIME.radar], [0.9, REGIME.sentinel2], [0.9, REGIME.landsat]];
+    months.forEach(([p, r], t) => step(s, t, Float32Array.from([p]), Uint8Array.from([r])));
+    expect(s.onset[0]).toBe(0);
+    // An optical month that favours no mining does restart it.
+    const o = newState(1);
+    const m2: Array<[number, number]> = [[0.9, REGIME.sentinel2], [0.03, REGIME.sentinel2], [0.9, REGIME.sentinel2], [0.9, REGIME.sentinel2]];
+    m2.forEach(([p, r], t) => step(o, t, Float32Array.from([p]), Uint8Array.from([r])));
+    expect(o.onset[0]).toBe(2);
+  });
+
   it("needs more radar-only months than optical months to confirm", () => {
     const months = (regime: number) => {
       const s = newState(1);
@@ -158,7 +170,7 @@ describe("temporal tracker", () => {
 
   it("uses month indexes that round-trip", () => {
     expect(monthName(monthIndex("2026-10"))).toBe("2026-10");
-    expect(DEFAULT_PARAMS.threshold).toBe(0.5);
+    expect(DEFAULT_PARAMS.threshold).toBe(0.7);
   });
 });
 

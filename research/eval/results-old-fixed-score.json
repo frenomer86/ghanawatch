@@ -1,0 +1,55 @@
+{
+ "patches": 51,
+ "minedPixels2022": 109916,
+ "newMiningPixels2016to2022": 61976,
+ "methods": {
+  "new: U-Net, January 2022 alone": {
+   "all mining (2022 mask)": {
+    "IoU": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "F1": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 109916
+   },
+   "recall on new mining since 2016": 0.0
+  },
+  "new: tracker, mined in January 2022": {
+   "all mining (2022 mask)": {
+    "IoU": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "F1": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 109916
+   },
+   "recall on new mining since 2016": 0.0
+  },
+  "new: tracker, mined at any time since the start": {
+   "all mining (2022 mask)": {
+    "IoU": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "F1": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 109916
+   },
+   "recall on new mining since 2016": 0.0
+  },
+  "old: two-date scan, any monthly run 2020-01 to 2022-01": {
+   "all mining (2022 mask)": {
+    "IoU": 0.0889,
+    "precision": 0.8288,
+    "recall": 0.0906,
+    "F1": 0.1633,
+    "tp": 9955,
+    "fp": 2056,
+    "fn": 99961
+   },
+   "recall on new mining since 2016": 0.1567
+  }
+ }
+}

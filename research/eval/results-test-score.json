@@ -1,0 +1,65 @@
+{
+ "patches": 51,
+ "minedPixels2022": 109916,
+ "newMiningPixels2016to2022": 61976,
+ "methods": {
+  "new: U-Net, January 2022 alone": {
+   "all mining (2022 mask)": {
+    "IoU": 0.7416,
+    "precision": 0.8583,
+    "recall": 0.8451,
+    "F1": 0.8516,
+    "tp": 92885,
+    "fp": 15330,
+    "fn": 17031
+   },
+   "recall on new mining since 2016": 0.8341
+  },
+  "new: tracker, mined in January 2022": {
+   "all mining (2022 mask)": {
+    "IoU": 0.658,
+    "precision": 0.6929,
+    "recall": 0.929,
+    "F1": 0.7937,
+    "tp": 102111,
+    "fp": 45263,
+    "fn": 7805
+   },
+   "recall on new mining since 2016": 0.8873
+  },
+  "new: tracker, mined at any time since the start": {
+   "all mining (2022 mask)": {
+    "IoU": 0.624,
+    "precision": 0.6621,
+    "recall": 0.9156,
+    "F1": 0.7685,
+    "tp": 100639,
+    "fp": 51369,
+    "fn": 9277
+   },
+   "recall on new mining since 2016": 0.8655
+  },
+  "old: two-date scan, any monthly run 2020-01 to 2022-01": {
+   "all mining (2022 mask)": {
+    "IoU": 0.1341,
+    "precision": 0.9049,
+    "recall": 0.136,
+    "F1": 0.2364,
+    "tp": 14947,
+    "fp": 1571,
+    "fn": 94969
+   },
+   "recall on new mining since 2016": 0.2092
+  }
+ },
+ "onset": {
+  "trackerStart": "2020-07",
+  "mines already in 2016: share dated in the first 3 months of the record": 0.8403,
+  "new mines (2016-2022): share dated in the first 3 months": 0.5142,
+  "new mines: onset months (median, p10, p90)": [
+   "2020-08",
+   "2020-07",
+   "2021-10"
+  ]
+ }
+}

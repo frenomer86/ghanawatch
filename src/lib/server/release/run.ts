@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { sql } from "drizzle-orm";
 import type { Geometry } from "geojson";
 import { getDb, rows as toRows } from "@/lib/db/client";
@@ -80,7 +80,7 @@ export async function runRelease(opts: ReleaseOptions): Promise<ReleaseResult> {
   // 4. Everything the files are made of.
   const d = await releaseData(month);
   // A dry run never lands under public/, so nothing half-made can be served.
-  const dir = dryRun ? join(process.cwd(), env().DATA_DIR, "releases-staging", month) : join(process.cwd(), "public", "releases", month);
+  const dir = dryRun ? resolve(process.cwd(), env().DATA_DIR, "releases-staging", month) : join(process.cwd(), "public", "releases", month);
   if (dryRun && existsSync(dir)) rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   const files: WrittenFile[] = [];

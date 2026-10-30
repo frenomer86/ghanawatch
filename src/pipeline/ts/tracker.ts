@@ -50,8 +50,10 @@ export const DEFAULT_PARAMS: TrackerParams = {
   remine: 0.03,
   initialMined: 0.02,
   modelPrior: 0.08,
-  weight: { 1: 0.55, 2: 0.45, 3: 0.25 },
-  threshold: 0.5,
+  // Chosen on validation blocks b1_4 and b2_5 (research/eval/tracker_sweep.py), never on the test blocks: the
+  // highest IoU among settings where one month, however confident, cannot confirm a pixel and two months can.
+  weight: { 1: 0.7, 2: 0.6, 3: 0.35 },
+  threshold: 0.7,
   clamp: 0.02,
 };
 
@@ -120,12 +122,16 @@ export function step(s: TrackerState, month: number, prob: Float32Array, regime:
     const pr = prob[i];
     if (reg !== 0 && Number.isFinite(pr)) {
       const pc = Math.min(1 - p.clamp, Math.max(p.clamp, pr));
-      const lr = (pc / (1 - pc) / priorOdds) ** p.weight[reg as 1 | 2 | 3];
-      n1 *= lr;
+      const odds = pc / (1 - pc) / priorOdds; // evidence for mining against the model's prior
+      n1 *= odds ** p.weight[reg as 1 | 2 | 3];
       s.observed[i] = Math.min(65535, s.observed[i] + 1);
-      if (pc >= 0.5) {
+      // Onset: the run of months whose evidence favours mining starts at the first such month; only an optical
+      // month whose evidence favours no mining ends it. Radar-only months see through cloud but see less, so
+      // they never end a run (on validation blocks this dates 93% of mines that predate the record at its start,
+      // against 30% when any month below a calibrated 0.5 ended the run, at the same weights).
+      if (odds >= 1) {
         if (s.runStart[i] < 0) s.runStart[i] = month;
-      } else if (s.onset[i] < 0) {
+      } else if (s.onset[i] < 0 && (reg === REGIME.sentinel2 || reg === REGIME.landsat)) {
         s.runStart[i] = -1;
       }
     }

@@ -89,7 +89,10 @@ edge, NIR from B8A), radar only, random cloud holes inside a patch; and 20% of b
 **Loss and optimiser.** Binary cross-entropy (positive weight 3) plus Dice, AdamW, one-cycle learning rate.
 
 **Calibration.** Per regime (Sentinel-2, Landsat, radar only) a logistic recalibration of the output is fitted
-on training patches, and the training base rate is recorded; the tracker uses both.
+on a seeded random sample of 600 GhanaWatch training composites (the patch files are ordered by place, and their
+first patches hold far less mining than the rest), and that sample's base rate is recorded (6.8%); the tracker
+uses both. A test runs a held-out composite through the pipeline's own normalisation, tiling and ONNX Runtime and
+checks it against the trained network in PyTorch (`tests/unit/ts-model.test.ts`).
 
 **Export.** ONNX, weights stored as float16 with a cast to float32 (half the file; computation in float32).
 Runs with `onnxruntime-node`, an optional dependency of the pipeline image (`ONNXRUNTIME_NODE_INSTALL=skip` in
@@ -100,11 +103,15 @@ Large grids are cut into overlapping 128-pixel tiles blended with a tent weight.
 ## 5. Tracker (`ts/tracker.ts`)
 
 Per 20 m pixel, three states: not mined, mined, regrown. Monthly transitions: onset 0.2%, regrowth 1%,
-re-mining 3%. Evidence: the calibrated probability as a likelihood ratio against the model's base rate,
-tempered by how far one month of that sensor is trusted (Sentinel-2 0.55, Landsat 0.45, radar only 0.25);
-a month without any observation only moves the chain forward. A pixel is mined when P(mined) ≥ 0.5. Its
-onset is the first month of the run of mining-looking observations that carried it over, and never moves.
-The state of every cell is saved (gzip) after each month.
+re-mining 3%. Evidence: the calibrated probability as an odds ratio against the model's base rate, tempered by how
+far one month of that sensor is trusted (Sentinel-2 0.7, Landsat 0.6, radar only 0.35); a month without any
+observation only moves the chain forward. A pixel is mined when P(mined) ≥ 0.7. One month, however confident,
+cannot confirm a pixel and two consecutive months can, so a single hazy, shadowed or freshly ploughed month never
+enters the frozen index. Onset is the first month of the run of months whose evidence favoured mining; only an
+optical month whose evidence favours no mining ends a run (radar-only months see through cloud but see less), and
+the onset never moves once set. The weights, the threshold and the onset rule were chosen on two validation blocks
+that are neither training nor test ground (`research/eval/tracker_sweep.py`, `docs/detector-results.md` §3b). The
+state of every cell is saved (gzip) after each month.
 
 ## 6. Sites and outputs (`ts/sites.ts`, `adapters/timeseries.ts`)
 
@@ -147,4 +154,17 @@ Model files: `models/gw_mining_unet.onnx` and `models/gw_mining_unet.json`.
 
 ## 9. Results
 
-See section "Results" below, filled from `research/smallmines/results/*.json` and `research/eval/*`.
+Full tables, generated from the result files: `docs/detector-results.md` (`python3 research/report.py`). In short:
+
+- **SmallMinesDS official test split:** U-Net (ResNet-18, 24 channels) IoU 0.730, F1 0.844, against the paper's
+  U-Net on RGB+ 0.651 and its best pretrained models 0.754 (U-Net ResNet-50, RGB) and 0.758 (Prithvi-EO-2.0 300M).
+- **Every input group adds** (gradient boosting, same split): RGB 0.492, RGB+ 0.551, all ten bands 0.598,
+  + indices 0.601, + radar 0.613, + terrain 0.616, + texture 0.622; the old detector's inputs 0.537. Spatial
+  cross-validation over 20 km squares: 0.603 pooled.
+- **What a month can offer** (U-Net, GhanaWatch's own composites): full Sentinel-2 0.707, Landsat-like 0.718, cloud
+  holes 0.639, radar only 0.452, 20 m 0.706.
+- **Held-out ground, month by month, production code** (blocks b2_3 and b3_3, 2020-07 to 2022-01, against the
+  experts' January 2022 map): new detector, one month IoU 0.742 (precision 0.858, recall 0.845); tracker IoU 0.658,
+  recall 0.929, 88.7% of the mining that appeared after 2016 found. The old two-date scan, every monthly run:
+  IoU 0.134, recall 0.136, 20.9% of new mining; with its Sentinel-2 offset corrected, 0.089. Mines already in the 2016
+  map are dated to the start of the record for 84%.

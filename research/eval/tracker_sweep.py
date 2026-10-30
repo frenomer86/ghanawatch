@@ -8,6 +8,9 @@ NumPy port of src/pipeline/ts/tracker.ts step(), for each candidate setting, and
 patches of the validation blocks (never used in training) against the SmallMinesDS January 2022 masks, as
 research/eval/score.py scores the test blocks. Writes <eval>/tracker_sweep.json.
 
+Selection: the admissible setting (see the design constraint in main) with the highest IoU on the validation
+blocks.
+
 Onset rules:
   calibrated  a run of mining-looking months starts at calibrated P >= 0.5 and any month below 0.5 ends it
               (the first version);
@@ -84,12 +87,24 @@ def main():
             if os.path.exists(f16):
                 ref16[ys, xs] = rasterio.open(f16).read(1) > 0
         data.append(([mi(m) for m in ms], probs, regs, sel.ravel(), ref.ravel(), ref16.ravel()))
+    # Design constraint, applied before any score is looked at: one month, however confident (at the probability
+    # clamp), must not confirm a pixel from the starting prior, so that a single hazy, shadowed or freshly ploughed
+    # month can never put a site into the frozen index; two confident months in a row must.
+    clamp, init = 0.02, 0.02
+    max_or = ((1 - clamp) / clamp) / (prior / (1 - prior))
+    odds = lambda p: p / (1 - p)
+    def admissible(w, thr):
+        one = odds(init) * max_or ** max(w)
+        two = odds(init) * max_or ** (2 * w[0])
+        return one < odds(thr) and two >= odds(thr)
     grid = [json.loads(a.only)] if a.only else [
-        {"rule": rule, "w": list(w), "thr": thr}
+        {"rule": rule, "w": [ws, round(ws - 0.1, 2), round(ws / 2, 3)], "thr": thr}
         for rule in ("calibrated", "evidence")
-        for w in ((0.55, 0.45, 0.25), (0.8, 0.7, 0.35), (1.0, 0.9, 0.5))
-        for thr in (0.5, 0.7)
+        for ws in (0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 1.0)
+        for thr in (0.5, 0.6, 0.7)
     ]
+    for g in grid:
+        g["admissible"] = admissible(g["w"], g["thr"])
     out = []
     for g in grid:
         P1, ON, REF, REF16 = [], [], [], []

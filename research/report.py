@@ -37,6 +37,17 @@ def main():
         v = ue["A_test/sentinel2_full"]
         L.append(f"| **GhanaWatch U-Net* ResNet-18** | all 24 channels (10 bands, 7 indices, VV/VH, terrain) | **{f(v['IoU'])}** | {f(v['precision'])} | {f(v['recall'])} | **{f(v['F1'])}** |")
     L.append("")
+    sp = os.path.join(RES, "gbm_spatial_cv.json")
+    if os.path.exists(sp):
+        s = json.load(open(sp))
+        L += ["## 1b. Spatial cross-validation (does it transfer to ground it has never seen?)", "",
+              f"All SmallMinesDS patches of both years grouped into {s['squaresKm']:.0f} km squares ({s['squares']} squares), {s['folds']} folds by square, so no test pixel has a training pixel within the same square; gradient boosting on the full feature set (24 channels and local texture). The pooled figure sits beside the same model on the official random split (section 1).", "",
+              "| Fold | IoU | Precision | Recall | F1 |", "|---|---|---|---|---|"]
+        for i, v in enumerate(s["perFold"], 1):
+            L.append(f"| {i} | {f(v['IoU'])} | {f(v['precision'])} | {f(v['recall'])} | {f(v['F1'])} |")
+        v = s["pooled"]
+        L.append(f"| **pooled** | **{f(v['IoU'])}** | {f(v['precision'])} | {f(v['recall'])} | **{f(v['F1'])}** |")
+        L.append("")
     if ue:
         L += ["## 2. The U-Net on what a month can offer", "",
               "A = SmallMinesDS patches; B = GhanaWatch's own January 2022 composites at the test footprints (the production inputs). Landsat = red edge hidden and NIR from B8A; cloud = random holes with no optical data; radar only = no optical data at all; 20 m = inputs averaged to 20 m (cells outside the gold belt).", "",
@@ -44,7 +55,10 @@ def main():
         for k, v in ue.items():
             L.append(f"| {k} | {f(v['IoU'])} | {f(v['precision'])} | {f(v['recall'])} | {f(v['F1'])} |")
         L.append("")
-    sc = os.path.join(a.eval, "score.json")
+    EV = os.path.join(HERE, "eval")
+    sc = os.path.join(EV, "results-test-score.json")
+    if not os.path.exists(sc):
+        sc = os.path.join(a.eval, "score.json")
     if os.path.exists(sc):
         s = json.load(open(sc))
         L += ["## 3. Old detector against new detector on held-out ground", "",
@@ -53,14 +67,35 @@ def main():
         for k, v in s["methods"].items():
             m = v["all mining (2022 mask)"]
             L.append(f"| {k} | {f(m['IoU'])} | {f(m['precision'])} | {f(m['recall'])} | {f(m['F1'])} | {f(v['recall on new mining since 2016'])} |")
+        fx = os.path.join(EV, "results-old-fixed-score.json")
+        if os.path.exists(fx):
+            v = [x for k, x in json.load(open(fx))["methods"].items() if k.startswith("old")][0]
+            m = v["all mining (2022 mask)"]
+            L.append(f"| old: the same scan with the Sentinel-2 offset corrected (its thresholds were tuned on the biased values) | {f(m['IoU'])} | {f(m['precision'])} | {f(m['recall'])} | {f(m['F1'])} | {f(v['recall on new mining since 2016'])} |")
         if s.get("onset"):
             L += ["", "Onset dates against the two expert maps:", ""]
             for k, v in s["onset"].items():
                 L.append(f"- {k}: {v}")
         L.append("")
+    sw = os.path.join(EV, "results-tracker-sweep.json")
+    if os.path.exists(sw):
+        rows = json.load(open(sw))
+        L += ["## 3b. Tracker settings, chosen on validation blocks", "",
+              "Blocks b1_4 and b2_5 (their official test patches, never used in training, and not the test blocks above), 2020-07 to 2022-01, replayed with `research/eval/tracker_sweep.py`. Admissible settings are those where one month of evidence, however confident, cannot confirm a pixel and two consecutive months can. That rule was already a requirement of the detector, enforced by a unit test; the first sweep did not apply it, its best setting broke the test, and the sweep was rerun with the rule as a constraint. The chosen setting has the highest validation IoU among admissible ones. \"Old mines dated at start\" is the share of mining already in the 2016 map that the tracker dates to the first three months of the record.", "",
+              "| Onset rule | Weights (S2, Landsat, radar) | Threshold | Admissible | IoU | Precision | Recall | Recall on new mining | Old mines dated at start |", "|---|---|---|---|---|---|---|---|---|"]
+        for r in rows:
+            if r["w"][0] not in (0.55, 0.7, 1.0):
+                continue
+            n = r["now"]
+            L.append(f"| {r['rule']} | {', '.join(str(x) for x in r['w'])} | {r['thr']} | {'yes' if r.get('admissible') else 'no'} | {f(n['IoU'])} | {f(n['precision'])} | {f(n['recall'])} | {f(r['recallNewMining'])} | {f(r['preexistingDatedAtStart'])} |")
+        ok = [r for r in rows if r.get("admissible") and r["rule"] == "evidence"]
+        if ok:
+            b = max(ok, key=lambda r: (r["now"]["IoU"], r["now"]["F1"]))
+            L += ["", f"Chosen: {b['rule']} onset rule, weights {', '.join(str(x) for x in b['w'])}, threshold {b['thr']} (validation IoU {f(b['now']['IoU'])}); the test blocks were scored once with it (section 3).", ""]
     cov = []
     for b in ("b2_3", "b3_3"):
-        p = os.path.join(a.eval, b, "coverage.json")
+        p = os.path.join(EV, f"results-coverage-{b}.json")
+        p = p if os.path.exists(p) else os.path.join(a.eval, b, "coverage.json")
         if os.path.exists(p):
             cov += json.load(open(p))
     if cov:
@@ -75,21 +110,10 @@ def main():
             v = by[mo]; avg = lambda k: sum(x[k] for x in v) / len(v)
             L.append(f"| {mo} | {avg('sentinel2'):.0%} | {avg('landsat'):.0%} | {avg('radarOnly'):.0%} | {avg('none'):.0%} |")
         L.append("")
-    sp = os.path.join(RES, "gbm_spatial_cv.json")
-    if os.path.exists(sp):
-        s = json.load(open(sp))
-        L += ["## 3b. Spatial cross-validation (does it transfer to ground it has never seen?)", "",
-              f"All SmallMinesDS patches of both years grouped into {s['squaresKm']:.0f} km squares ({s['squares']} squares), {s['folds']} folds by square, so no test pixel has a training pixel within the same square; gradient boosting on the full feature set (24 channels and local texture). The pooled figure sits beside the same model on the official random split (section 1, last row).", "",
-              "| Fold | IoU | Precision | Recall | F1 |", "|---|---|---|---|---|"]
-        for i, v in enumerate(s["perFold"], 1):
-            L.append(f"| {i} | {f(v['IoU'])} | {f(v['precision'])} | {f(v['recall'])} | {f(v['F1'])} |")
-        v = s["pooled"]
-        L.append(f"| **pooled** | **{f(v['IoU'])}** | {f(v['precision'])} | {f(v['recall'])} | **{f(v['F1'])}** |")
-        L.append("")
     meta = os.path.join(RES, "unet_meta.json")
     if os.path.exists(meta):
         m = json.load(open(meta))
-        L += ["## 5. Training", "", f"Encoder {m['encoder']}, {m['epochs']} epochs of {m['per_epoch']} patches; per-epoch check on 400 B-test patches:", "",
+        L += ["## 5. Training", "", f"Encoder {m['encoder']}, {m['epochs']} epochs of {m['per_epoch']} patches. The per-epoch check used the first 400 B-test patches, which hold far less mining than the rest (1.8% of pixels against 7.8% over all 644), so its scores sit well below the full evaluation in section 2; it tracked progress only.", "",
               "| Epoch | Loss | IoU | F1 | Minutes |", "|---|---|---|---|---|"]
         for e in m["log"]:
             q = e.get("B_test_quick", {})

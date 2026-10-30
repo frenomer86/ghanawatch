@@ -19,7 +19,7 @@ export async function putObject(key: string, body: Buffer, contentType: string):
     const res = await put(key, body, { access: "public", contentType, token: e.BLOB_READ_WRITE_TOKEN, addRandomSuffix: true });
     return { key: res.pathname, url: res.url };
   }
-  const dir = path.join(process.cwd(), e.DATA_DIR, "uploads");
+  const dir = path.resolve(process.cwd(), e.DATA_DIR, "uploads");
   const file = path.join(dir, key);
   const rel = path.relative(dir, file);
   if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("invalid storage key");

@@ -1,0 +1,249 @@
+[
+ {
+  "month": "2020-07",
+  "sentinel2": 0.047882080078125,
+  "landsat": 0.0033731460571289062,
+  "radarOnly": 0.9487447738647461,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 7
+  },
+  "seconds": 3
+ },
+ {
+  "month": "2020-08",
+  "sentinel2": 0.6127767562866211,
+  "landsat": 0.12989139556884766,
+  "radarOnly": 0.25733184814453125,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 9
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2020-09",
+  "sentinel2": 0.07204341888427734,
+  "landsat": 0.05160808563232422,
+  "radarOnly": 0.8763484954833984,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 6
+  },
+  "seconds": 3
+ },
+ {
+  "month": "2020-10",
+  "sentinel2": 0.6019859313964844,
+  "landsat": 0.1351613998413086,
+  "radarOnly": 0.26285266876220703,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 2,
+   "s1": 8
+  },
+  "seconds": 3
+ },
+ {
+  "month": "2020-11",
+  "sentinel2": 0.6173744201660156,
+  "landsat": 0.0740518569946289,
+  "radarOnly": 0.30857372283935547,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2020-12",
+  "sentinel2": 0.7853584289550781,
+  "landsat": 0.1494731903076172,
+  "radarOnly": 0.06516838073730469,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 2,
+   "s1": 8
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-01",
+  "sentinel2": 0.9975090026855469,
+  "landsat": 0.00018596649169921875,
+  "radarOnly": 0.0023050308227539062,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 2,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-02",
+  "sentinel2": 0.9235935211181641,
+  "landsat": 0,
+  "radarOnly": 0.07640647888183594,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 0,
+   "s1": 8
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-03",
+  "sentinel2": 0.06535053253173828,
+  "landsat": 0.6444225311279297,
+  "radarOnly": 0.29022693634033203,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 6
+  },
+  "seconds": 3
+ },
+ {
+  "month": "2021-04",
+  "sentinel2": 0.8969020843505859,
+  "landsat": 0.025144577026367188,
+  "radarOnly": 0.07795333862304688,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 8
+  },
+  "seconds": 5
+ },
+ {
+  "month": "2021-05",
+  "sentinel2": 0.8170900344848633,
+  "landsat": 0.0944528579711914,
+  "radarOnly": 0.08845710754394531,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-06",
+  "sentinel2": 0.627964973449707,
+  "landsat": 0,
+  "radarOnly": 0.37203502655029297,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 0,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-07",
+  "sentinel2": 0.6136140823364258,
+  "landsat": 0.19841861724853516,
+  "radarOnly": 0.18796730041503906,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-08",
+  "sentinel2": 0.2814302444458008,
+  "landsat": 0,
+  "radarOnly": 0.7185697555541992,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 0,
+   "s1": 8
+  },
+  "seconds": 3
+ },
+ {
+  "month": "2021-09",
+  "sentinel2": 0.6236124038696289,
+  "landsat": 0.042972564697265625,
+  "radarOnly": 0.33341503143310547,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 7
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-10",
+  "sentinel2": 0.964390754699707,
+  "landsat": 0.016145706176757812,
+  "radarOnly": 0.019463539123535156,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 1,
+   "s1": 9
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-11",
+  "sentinel2": 0.8877830505371094,
+  "landsat": 0.05399131774902344,
+  "radarOnly": 0.05822563171386719,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 2,
+   "s1": 8
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2021-12",
+  "sentinel2": 0.9951915740966797,
+  "landsat": 0.0048084259033203125,
+  "radarOnly": 0,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 2,
+   "s1": 5
+  },
+  "seconds": 4
+ },
+ {
+  "month": "2022-01",
+  "sentinel2": 0.9982624053955078,
+  "landsat": 0.0016546249389648438,
+  "radarOnly": 0.00008296966552734375,
+  "none": 0,
+  "scenes": {
+   "s2": 12,
+   "landsat": 3,
+   "s1": 2
+  },
+  "seconds": 4
+ }
+]

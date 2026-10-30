@@ -3,3 +3,4 @@ results/*.pt
 results/gbm_full.txt
 results_*.log
 __pycache__/
+results/*.onnx
