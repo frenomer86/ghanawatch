@@ -127,5 +127,49 @@ def main():
             json.dump(results, fh, indent=1)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and (len(sys.argv) == 1 or sys.argv[1] == "ablation"):
     main()
+
+
+def spatial_cv(folds=5, km=20.0):
+    """How much the random patch split flatters a model: the full-feature model scored on whole km x km
+    squares it never saw (group k-fold over squares), against the official random split."""
+    patches = index()
+    rng = np.random.default_rng(0)
+    groups = sorted({block_of(p, km) for p in patches})
+    order = rng.permutation(len(groups))
+    fold_of = {g: int(order[i] % folds) for i, g in enumerate(groups)}
+    cols = CONFIGS["+ texture (full)"]
+    idx = [ALL.index(c) for c in cols]
+    # Sample pixels per patch once (features computed once), keep the patch's fold.
+    X, Y, F, test = [], [], [], []
+    for p in patches:
+        x, m = load(p)
+        f = pixel_features(x)[:, idx].astype(np.float32)
+        y = m.ravel()
+        pos = np.flatnonzero(y == 1); neg = np.flatnonzero(y == 0)
+        take = np.concatenate([rng.choice(pos, min(len(pos), 120), replace=False) if len(pos) else pos, rng.choice(neg, min(len(neg), 120), replace=False)])
+        X.append(f[take]); Y.append(y[take]); F.append(np.full(len(take), fold_of[block_of(p, km)]))
+        sub = rng.choice(len(y), 2048, replace=False)  # scoring sample per patch (all pixels would not fit in memory)
+        test.append((fold_of[block_of(p, km)], f[sub].astype(np.float16), y[sub]))
+    X = np.concatenate(X); Y = np.concatenate(Y); F = np.concatenate(F)
+    tp = fp = fn = 0
+    per = []
+    for k in range(folds):
+        model = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, num_leaves=63, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, verbose=-1, n_jobs=2)
+        model.fit(X[F != k], Y[F != k])
+        a = b = c = 0
+        for fk, f, y in test:
+            if fk != k:
+                continue
+            pr = model.predict_proba(f.astype(np.float32))[:, 1] >= 0.5
+            a += int((pr & (y == 1)).sum()); b += int((pr & (y == 0)).sum()); c += int((~pr & (y == 1)).sum())
+        per.append(scores(a, b, c)); tp += a; fp += b; fn += c
+        print(f"fold {k}: {per[-1]}", file=sys.stderr, flush=True)
+    res = {"squaresKm": km, "folds": folds, "squares": len(groups), "pooled": scores(tp, fp, fn), "perFold": per}
+    json.dump(res, open(os.path.join(OUT, "gbm_spatial_cv.json"), "w"), indent=1)
+    print(json.dumps(res["pooled"]), file=sys.stderr)
+
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "spatial":
+    spatial_cv()

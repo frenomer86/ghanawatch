@@ -1,5 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -8,7 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * -> loadSites -> Galamsey Index 2.0. A site appears, is confirmed, then spreads; the index must count
  * its first ground in the month it was confirmed and the spread in the month the spread was confirmed.
  */
-const dir = mkdtempSync(join(tmpdir(), "gw-detector-"));
+// The database client puts DATA_DIR under the project folder; .data-pgtest/ is git-ignored.
+mkdirSync(".data-pgtest", { recursive: true });
+const dir = mkdtempSync(join(".data-pgtest", "detector-"));
 process.env.DATA_DIR = join(dir, "data");
 process.env.GW_TS_DIR = join(dir, "ts");
 delete process.env.DATABASE_URL;

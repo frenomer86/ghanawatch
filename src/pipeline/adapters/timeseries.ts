@@ -70,6 +70,11 @@ export const timeseriesAdapter: Adapter = {
           await writeHistory(db, r, districts, context);
         }, started + budgetMs);
         if (!res) continue;
+        if (res.month !== lastComplete) {
+          // Still catching up on its history: map detections wait until the cell reaches the present.
+          ctx.log(`${SLUG}: cell ${c.id} caught up to ${res.month} of ${lastComplete}; detections are published once it is current`);
+          continue;
+        }
         // Preview the month in progress once ten days of it have passed (at most every five days per cell).
         let shown = res;
         if (ctx.now.getUTCDate() >= 10 && process.env.GW_TS_PREVIEW !== "0" && res.month === lastComplete && previewDue(c.id, ctx.now)) {
