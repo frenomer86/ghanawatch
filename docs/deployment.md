@@ -16,7 +16,31 @@ Report photos are kept on the `uploads` volume. The firewall allows only SSH, HT
 
 ## Plan
 
-Hostinger **KVM 2** (2 vCPU, 8 GB RAM, 100 GB NVMe) with **Ubuntu 24.04** (the "Ubuntu 24.04 with Docker" template if offered). KVM 1 (4 GB) works for the current data, but KVM 2 leaves room for Phase 2 Sentinel processing.
+Hostinger **KVM 4** (4 vCPU, 16 GB RAM, 200 GB NVMe, 16 TB bandwidth a month) with **Ubuntu 24.04** (the "Ubuntu 24.04
+with Docker" template if offered), in a European data centre (closest to both Ghana and the Planetary Computer's
+West Europe storage that serves Landsat and Sentinel-1).
+
+Why KVM 4 and not KVM 2: detector 3.0 (the monthly record, `GW_DETECTOR=multisensor`) reads every image of every month.
+Measured with `research/eval/measure-cost.ts` (October 2026, mining belt, a clear and a cloudy month):
+
+| One block of the record, one month | Downloaded | Time | Peak memory |
+|---|---|---|---|
+| 10 m block (10.2 km square) | 89–261 MB | 1–3 min | 0.6–1.0 GB |
+| 20 m block (20.5 km square) | 233–363 MB | 1–4 min | 0.7–1.1 GB |
+
+- **Live, every month** (538 cells, the 210 mining-belt cells at 10 m): about 0.35 TB and 50 hours of pipeline time,
+  plus up to four previews of the month in progress per cell (another 1.4 TB; `GW_TS_PREVIEW=0` turns them off).
+- **Backfill to 2017**, once: at 20 m everywhere (`GW_TS_GOLD_RES=20`; the model scores 0.706 at 20 m against 0.707 at
+  10 m on GhanaWatch composites) about 26 TB; the mining belt alone from 2018 (`--priority=2`, `GW_TS_START=2018-01`)
+  about 9 TB, roughly two weeks at `--concurrency=4`. Spread it over two months on KVM 4, or run it on an unmetered
+  university connection with `--export`/`--import` (docs/detector.md §8).
+- **Memory:** four backfill workers (about 4.5 GB), the web server, PostgreSQL and Caddy (about 2 GB), and the image
+  build that `deploy.sh` runs on the server (3–4 GB) together need 16 GB; on 8 GB a deploy during a backfill runs out
+  of memory.
+- **Disk:** terrain cache about 6 GB, tracker state about 4 GB, database and images some tens of GB.
+
+KVM 2 (2 vCPU, 8 GB, 100 GB, 8 TB) runs the website and the two-date scan, and the live record once the backfill has
+been done elsewhere; KVM 1 is too small.
 
 ## What the owner does (once)
 
