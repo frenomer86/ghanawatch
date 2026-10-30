@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { streetPhotoQuery } from "@/lib/domain/validation";
-import { enforceRateLimit, handle, HttpError, parseQuery } from "@/lib/server/http";
+import { enforceRateLimit, handle, HttpError, parseQuery, readBody } from "@/lib/server/http";
 import { resolveStreetPhoto } from "@/lib/server/explore/ground";
-import { isPublicHttpsUrl, userAgent } from "@/lib/server/explore/fetch";
+import { resolvesToPublic, userAgent } from "@/lib/server/explore/fetch";
 
 /**
  * GET /api/v1/explore/photo?src=panoramax|mapillary&id=&size=thumb|full
@@ -23,18 +23,19 @@ export const GET = handle(async (req: NextRequest) => {
   } catch {
     throw new HttpError(404, "Photo not found");
   }
-  if (!isPublicHttpsUrl(url)) throw new HttpError(502, "Photo could not be loaded");
-  // Redirects are followed by hand so every hop is checked to be a public https address, and only
-  // raster image types are passed on: an SVG served from this origin would be a page with scripts.
+  // The photo's address comes from a federated catalogue (any Panoramax instance can list pictures), so
+  // the host it names is checked to resolve only to public addresses, before the first request and again
+  // at every redirect hop, which are followed by hand. Only raster image types are passed on: an SVG
+  // served from this origin would be a page with scripts.
   let res: Response | null = null;
   let target = url;
   for (let hop = 0; hop < 3; hop++) {
+    if (!(await resolvesToPublic(target))) throw new HttpError(502, "Photo could not be loaded");
     const r = await fetch(target, { headers: { "user-agent": userAgent() }, signal: AbortSignal.timeout(20_000), redirect: "manual" });
     if (r.status >= 300 && r.status < 400) {
       const next = r.headers.get("location");
       if (!next) break;
       target = new URL(next, target).toString();
-      if (!isPublicHttpsUrl(target)) throw new HttpError(502, "Photo could not be loaded");
       continue;
     }
     res = r;
@@ -43,9 +44,10 @@ export const GET = handle(async (req: NextRequest) => {
   if (!res) throw new HttpError(502, "Photo could not be loaded");
   const type = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   if (!res.ok || !RASTER.has(type)) throw new HttpError(502, "Photo could not be loaded");
-  if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) throw new HttpError(502, "Photo too large");
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength > MAX_BYTES) throw new HttpError(502, "Photo too large");
+  // Read through a byte ceiling: a host that streams without a length cannot fill the server's memory.
+  const buf = await readBody(res, MAX_BYTES).catch(() => {
+    throw new HttpError(502, "Photo too large");
+  });
   return new Response(buf, {
     headers: {
       "content-type": type,

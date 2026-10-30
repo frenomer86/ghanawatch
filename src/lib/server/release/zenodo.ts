@@ -22,6 +22,9 @@ export async function depositOnZenodo(opts: { dir: string; files: string[]; titl
   const created = await fetch(`${base}/deposit/depositions`, { method: "POST", headers, body: "{}", signal: AbortSignal.timeout(30_000) });
   if (!created.ok) throw new Error(`zenodo: could not create a deposition (HTTP ${created.status})`);
   const dep = (await created.json()) as { id: number; links: { bucket: string } };
+  // The upload address comes back in Zenodo's answer and the token is sent to it: only ever to Zenodo's
+  // own host over https, and the deposition id is a number before it is put into a URL.
+  if (!sameHttpsHost(dep.links?.bucket, base) || !Number.isSafeInteger(dep.id)) throw new Error("zenodo: unexpected deposition answer");
   for (const f of opts.files) {
     const body = readFileSync(join(opts.dir, f));
     const up = await fetch(`${dep.links.bucket}/${encodeURIComponent(f)}`, { method: "PUT", headers: { authorization: `Bearer ${token}`, "content-type": "application/octet-stream" }, body: new Uint8Array(body), signal: AbortSignal.timeout(120_000) });
@@ -46,4 +49,15 @@ export async function depositOnZenodo(opts: { dir: string; files: string[]; titl
   const rec = (await pub.json()) as { doi: string; links: { record_html?: string; html?: string } };
   opts.log(`zenodo: published ${rec.doi}`);
   return { doi: rec.doi, recordUrl: rec.links.record_html ?? rec.links.html ?? "" };
+}
+
+/** True when `url` is https on exactly the host of `base`. */
+export function sameHttpsHost(url: unknown, base: string): boolean {
+  if (typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && !u.username && !u.password && u.host === new URL(base).host;
+  } catch {
+    return false;
+  }
 }
