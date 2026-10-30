@@ -9,6 +9,7 @@ import { projectStructures, riverWindows, scanRiverWindow, type RiverLine, type 
 import { hull, radarPonds, type RadarPond } from "@/pipeline/s1/water";
 import { SurfaceWater, type WaterSeen } from "@/pipeline/context/surface-water";
 import type { Adapter, AdapterContext, NormalisedEvent } from "./types";
+import { detector } from "../ts/mode";
 
 /**
  * Sentinel-1 radar (Microsoft Planetary Computer, keyless), which sees
@@ -77,6 +78,8 @@ export const sentinel1Adapter: Adapter = {
 
     // --- Ponds through cloud -----------------------------------------------
     const events: NormalisedEvent[] = [];
+    // New ponds through cloud are part of the multi-sensor detector now (radar every month, every cell).
+    if (detector() !== "legacy") return { events, notes, extra: { riverReflections: targetsFound, dredgerTagsForReview: flagged, radarPonds: 0, cells: 0 } };
     const maxCells = num(process.env.S1_MAX_CELLS, 40);
     const stale = new Date(ctx.now.getTime() - 6 * DAY);
     const cells = await db

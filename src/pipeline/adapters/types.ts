@@ -13,6 +13,8 @@ export interface NormalisedEvent {
   detectedAt: Date;
   imageDate: string; // YYYY-MM-DD
   imageDateEnd?: string | null;
+  /** When the change began, if the detector knows it (YYYY-MM-DD); defaults to imageDate. Never moves later. */
+  firstImageDate?: string | null;
   confidence: Confidence;
   confidenceScore?: number | null;
   /** Optional override; otherwise computed by the runner from type, area and confidence. */

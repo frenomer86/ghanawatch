@@ -38,7 +38,7 @@ export function scoreKind(e: Pick<ScoreEventRow, "type" | "methodVersion" | "sig
   if (e.methodVersion.startsWith("s2-galamsey")) {
     if (e.type === "water_change" || e.signature === "turbid_water") return { kind: "muddy", likely: false };
     if (e.signature === "cleared") return { kind: "cleared", likely: false };
-    if (e.signature === "cleared_with_pits" || e.signature === "new_pits") return e.confidence === "low" ? { kind: "possible", likely: false } : { kind: "mining", likely: true };
+    if (e.signature === "cleared_with_pits" || e.signature === "new_pits" || e.signature === "mining") return e.confidence === "low" ? { kind: "possible", likely: false } : { kind: "mining", likely: true };
   }
   return { kind: "other", likely: false };
 }

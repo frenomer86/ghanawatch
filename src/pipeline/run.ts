@@ -14,6 +14,8 @@ import { NotConnectedError } from "./adapters/types";
 import { glofasAdapter } from "./adapters/glofas";
 import { sentinel2Adapter } from "./adapters/sentinel2";
 import { sentinel1Adapter } from "./adapters/sentinel1";
+import { timeseriesAdapter } from "./adapters/timeseries";
+import { seedSources } from "./seed/sources";
 import { forestLossAdapter } from "./adapters/forest-loss";
 import { gfwAlertsAdapter } from "./adapters/gfw-alerts";
 import { rainForecastAdapter } from "./adapters/rain-forecast";
@@ -35,7 +37,7 @@ import { markLicensed } from "./context/licensed";
  * provider failing never blocks the others; every outcome is written to
  * pipeline_runs where the Data Sources page and /api/v1/freshness read it.
  */
-const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, newsSignalsAdapter, sentinel2Adapter, sentinel1Adapter, forestLossAdapter];
+const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, forestLossAdapter];
 
 async function main() {
   loadEnv({ path: ".env.local" });
@@ -55,6 +57,8 @@ async function runOnce() {
   const log = (s: string) => console.log(`[pipeline] ${s}`);
   const db = await getDb();
   const now = new Date();
+  // Keep the source registry in step with the code, so a new source has its row before its first run.
+  await seedSources(db, () => undefined);
   const districts = await loadDistricts(db);
   const context = await ContextIndex.load(db);
 
@@ -196,7 +200,7 @@ const LAKE_DISTRICTS = sql`(e.district_id in (select id from admin_boundaries wh
 const PITS_NEAR = sql`exists (
     select 1 from change_events o
     where o.id <> e.id and o.status <> 'dismissed' and o.confidence in ('medium', 'high')
-      and ((o.method_version like 's2-galamsey-%' and o.properties->>'signature' in ('new_pits', 'cleared_with_pits')) or o.method_version like 's1-water-%')
+      and ((o.method_version like 's2-galamsey-%' and o.properties->>'signature' in ('new_pits', 'cleared_with_pits', 'mining')) or o.method_version like 's1-water-%')
       and o.centroid_lon between e.centroid_lon - 0.009 and e.centroid_lon + 0.009
       and o.centroid_lat between e.centroid_lat - 0.009 and e.centroid_lat + 0.009)`;
 
@@ -301,7 +305,7 @@ const URGENT_CLUSTER_HA = 10;
 async function urgentClusters(db: Db): Promise<number> {
   const pit = (t: string) =>
     sql.raw(`${t}.status <> 'dismissed' and ${t}.confidence in ('medium', 'high') and ${t}.properties #>> '{placement,mine}' is null and not (${t}.properties ? 'licensedMine')
-      and ((${t}.method_version like 's2-galamsey-%' and ${t}.properties->>'signature' in ('new_pits', 'cleared_with_pits')) or ${t}.method_version like 's1-water-%')`);
+      and ((${t}.method_version like 's2-galamsey-%' and ${t}.properties->>'signature' in ('new_pits', 'cleared_with_pits', 'mining')) or ${t}.method_version like 's1-water-%')`);
   const clusterHa = sql`(select coalesce(sum(o.area_ha), 0) from change_events o
       where ${pit("o")}
         and o.centroid_lon between e.centroid_lon - 0.009 and e.centroid_lon + 0.009
@@ -409,7 +413,7 @@ async function upsertEvents(db: Db, events: NormalisedEvent[], districts: Distri
       detectedAt: ev.detectedAt,
       imageDate: ev.imageDate,
       imageDateEnd: ev.imageDateEnd ?? null,
-      firstImageDate: ev.imageDate,
+      firstImageDate: ev.firstImageDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.firstImageDate) && ev.firstImageDate <= ev.imageDate ? ev.firstImageDate : ev.imageDate,
       confidence: ev.confidence,
       confidenceScore: ev.confidenceScore ?? null,
       severity: (() => {

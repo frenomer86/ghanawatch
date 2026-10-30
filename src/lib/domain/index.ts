@@ -10,9 +10,13 @@
  * versioned: a closed month is never changed under the same version.
  */
 import { adjustedArea, type RateSample } from "./uncertainty";
-import type { Site } from "./sites";
+import { newAreaIn, type Site } from "./sites";
 
-export const INDEX_VERSION = "1.0";
+/**
+ * 2.0: sites from the multi-sensor detector (s2-galamsey-3.0) add the area they grew each month, so a pit
+ * that spreads counts in the months it spread; 1.0 counted a site's first outline only.
+ */
+export const INDEX_VERSION = "2.0";
 
 export interface IndexDistrict {
   id: string;
@@ -110,12 +114,13 @@ export function buildIndex(sites: Site[], districts: IndexDistrict[], months: st
     const rowsThisMonth: DistrictMonthRow[] = [];
     for (const d of districts) {
       const own = sitesOf.get(d.id) ?? [];
-      const fresh = own.filter((s) => s.firstMonth === month);
+      const fresh = own.filter((s) => newAreaIn(s, month) > 0);
       const active = own.filter((s) => s.firstMonth <= month && s.lastMonth >= month).length;
-      const newHa = round1(fresh.reduce((a, s) => a + s.areaHa, 0));
-      const forest = fresh.filter((s) => s.inReserve).reduce((a, s) => a + s.areaHa, 0);
-      const river = fresh.filter((s) => s.inRiverBuffer).reduce((a, s) => a + s.areaHa, 0);
-      const unlicensed = fresh.filter((s) => s.legality === "unlicensed").reduce((a, s) => a + s.areaHa, 0);
+      const add = (list: Site[]) => list.reduce((a, s) => a + newAreaIn(s, month), 0);
+      const newHa = round1(add(fresh));
+      const forest = add(fresh.filter((s) => s.inReserve));
+      const river = add(fresh.filter((s) => s.inRiverBuffer));
+      const unlicensed = add(fresh.filter((s) => s.legality === "unlicensed"));
       const c = round1((cum.get(d.id) ?? 0) + newHa);
       cum.set(d.id, c);
       const index = d.areaKm2 && d.areaKm2 > 0 ? round2(newHa / (d.areaKm2 / 100)) : 0;
@@ -127,7 +132,7 @@ export function buildIndex(sites: Site[], districts: IndexDistrict[], months: st
         cumHa: c,
         index,
         rank: null,
-        newSites: fresh.length,
+        newSites: own.filter((s) => s.firstMonth === month).length,
         activeSites: active,
         pctForest: newHa > 0 ? round1((forest / newHa) * 100) : null,
         pctRiver: newHa > 0 ? round1((river / newHa) * 100) : null,
@@ -140,8 +145,8 @@ export function buildIndex(sites: Site[], districts: IndexDistrict[], months: st
     ranked.forEach((r, i) => (r.rank = i + 1));
     out.push(...rowsThisMonth);
 
-    const monthSites = counted.filter((s) => s.firstMonth === month);
-    const newHa = round1(monthSites.reduce((a, s) => a + s.areaHa, 0));
+    const monthSites = counted.filter((s) => newAreaIn(s, month) > 0);
+    const newHa = round1(monthSites.reduce((a, s) => a + newAreaIn(s, month), 0));
     nationalCum = round1(nationalCum + newHa);
     const est = opts.precision ? adjustedArea(newHa, opts.precision, opts.detection) : null;
     national.push({
@@ -150,10 +155,10 @@ export function buildIndex(sites: Site[], districts: IndexDistrict[], months: st
       cumHa: nationalCum,
       ciLow: est ? est.low : null,
       ciHigh: est ? est.high : null,
-      newSites: monthSites.length,
+      newSites: counted.filter((s) => s.firstMonth === month).length,
       districtsAffected: ranked.length,
       topDistrictId: ranked[0]?.districtId ?? null,
-      inReservesHa: round1(monthSites.filter((s) => s.inReserve).reduce((a, s) => a + s.areaHa, 0)),
+      inReservesHa: round1(monthSites.filter((s) => s.inReserve).reduce((a, s) => a + newAreaIn(s, month), 0)),
     });
   }
   return { districts: out, national };

@@ -32,6 +32,50 @@ export interface SourceDef {
 
 export const SOURCE_REGISTRY: SourceDef[] = [
   {
+    slug: "gw-multisensor",
+    name: "GhanaWatch monthly galamsey record",
+    provider: "GhanaWatch (KNUST), from Copernicus Sentinel-2 and Sentinel-1, USGS Landsat 8 and 9, and the Copernicus DEM",
+    url: "https://element84.com/earth-search/",
+    docUrl: "https://huggingface.co/datasets/ellaampy/SmallMinesDS",
+    category: "imagery",
+    description:
+      "GhanaWatch's own month-by-month record of galamsey since 2017. For every part of Ghana and every month: all ten Sentinel-2 bands of every image (haze, cloud and shadow screened), Landsat 8 and 9 where cloud hid Sentinel-2, Sentinel-1 radar through cloud, and terrain. A U-Net trained on hand-mapped Ghanaian mines (SmallMinesDS) scores each month, and a per-pixel tracker dates when mining started, whether a site is still spreading and whether it has grown back. Mining belt at 10 m, the rest of Ghana at 20 m.",
+    licence: "Copernicus Sentinel data: free, full and open. Landsat: public domain (USGS). Copernicus DEM: free under the Copernicus licence.",
+    attributionText: "Contains modified Copernicus Sentinel data (2017–2026) and USGS Landsat data, processed by GhanaWatch",
+    cadence: "Every month for every cell; the month in progress is previewed after its tenth day",
+    resolutionM: 10,
+    connection: "live",
+  },
+  {
+    slug: "usgs-landsat",
+    name: "USGS Landsat 8 and 9",
+    provider: "U.S. Geological Survey Landsat Collection 2 Level-2, via Microsoft Planetary Computer",
+    url: "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2",
+    docUrl: "https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products",
+    category: "imagery",
+    description:
+      "Surface reflectance at 30 m every 8 days (two satellites). Used where Sentinel-2 saw no clear ground all month, cross-calibrated to Sentinel-2 with the NASA HLS adjustment, so cloudy months still have an optical view.",
+    licence: "Public domain (U.S. Government work)",
+    attributionText: "Landsat imagery courtesy of the U.S. Geological Survey",
+    cadence: "Every 8 days",
+    resolutionM: 30,
+    connection: "live",
+  },
+  {
+    slug: "copernicus-dem",
+    name: "Copernicus DEM GLO-30",
+    provider: "European Space Agency / Copernicus, via Microsoft Planetary Computer",
+    url: "https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30",
+    docUrl: "https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model",
+    category: "imagery",
+    description: "Elevation at 30 m. GhanaWatch uses slope and height above the surrounding ground: galamsey pits sit in valleys and along streams.",
+    licence: "Free of charge under the Copernicus DEM licence",
+    attributionText: "Copernicus DEM © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA",
+    cadence: "Static",
+    resolutionM: 30,
+    connection: "live",
+  },
+  {
     slug: "cdse-sentinel-2",
     name: "Copernicus Sentinel-2",
     provider: "Copernicus Sentinel-2 (ESA / European Commission), via Element84 Earth Search on AWS Open Data",
@@ -39,7 +83,7 @@ export const SOURCE_REGISTRY: SourceDef[] = [
     docUrl: "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
     category: "imagery",
     description:
-      "GhanaWatch's own nationwide analysis of Sentinel-2 L2A imagery: all of Ghana in 538 cells, scanned in rotation (mining regions at 20 m and more often, elsewhere at 40 m). A cloud-masked composite of the last 120 days is compared with one from one to two years earlier; cleared land, new water-filled pits on farms, in settlements or in forest, and rivers that turned muddy are reported and placed against schools, homes, cemeteries and reserves.",
+      "Sentinel-2 L2A imagery, all ten 10 m and 20 m bands, read keyless from Element84 Earth Search. It is the main input of GhanaWatch's monthly galamsey record (above). A second, older scan of the mining belt compares the last 120 days with one to two years earlier to report rivers that turned muddy.",
     licence: "Free, full and open access under the Copernicus Sentinel Data Terms and Conditions",
     attributionText: "Contains modified Copernicus Sentinel data (2025–2026), processed by GhanaWatch",
     cadence: "Revisit every 5 days; each part of Ghana rescanned every few days",
@@ -54,7 +98,7 @@ export const SOURCE_REGISTRY: SourceDef[] = [
     docUrl: "https://planetarycomputer.microsoft.com/docs/concepts/sas/",
     category: "imagery",
     description:
-      "C-band radar that sees through cloud, read keyless from Microsoft Planetary Computer (VV and VH, 10 m). Two uses: on the Pra, Ankobra, Offin, Birim and Tano, strong reflections on open water that repeat on different days are passed to moderators as possible dredgers or mining platforms (never published unchecked); and wherever the optical scan cannot see in the rains (mining areas first), new ponds of half a hectare or more against the same weeks two years earlier are reported.",
+      "C-band radar that sees through cloud, read keyless from Microsoft Planetary Computer (VV and VH, 10 m). Two uses: every month, for all of Ghana, it is an input of the galamsey record, so the rainy season is never blind; and on the Pra, Ankobra, Offin, Birim and Tano, strong reflections on open water that repeat on different days are passed to moderators as possible dredgers or mining platforms (never published unchecked).",
     licence: "Free, full and open access under the Copernicus Sentinel Data Terms and Conditions",
     attributionText: "Contains modified Copernicus Sentinel data (2024–2026), processed by Microsoft Planetary Computer and GhanaWatch",
     cadence: "A new pass every 6 days (Sentinel-1C and 1D)",

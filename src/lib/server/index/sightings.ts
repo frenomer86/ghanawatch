@@ -12,6 +12,8 @@ export const RIVER_BUFFER_M = 100;
 
 interface Row {
   id: string;
+  source_event_id?: string | null;
+  cohort?: string | null;
   month: string;
   lon: number;
   lat: number;
@@ -28,31 +30,41 @@ interface Row {
 }
 
 /**
- * Every sighting the index can count: the historical scan (one row per site per scan month) and the live
- * detections (counted in the month of their first satellite date). Both are folded into sites.
+ * Every sighting the index can count.
+ *
+ * Index 2.0 counts the multi-sensor detector (s2-galamsey-3.0) only: its history rows, one per site per
+ * month in which the site grew, each carrying the area added that month. The live detections of that
+ * method are not read here, since every finished month is already in the history rows.
+ *
+ * Until that detector's backfill has written history rows, the earlier sightings are used as before (the
+ * two-date scan's history plus live detections, counted in the month first seen) and `legacyFallback` is
+ * set, so a release can say so.
  */
-export async function loadSites(): Promise<{ sites: Site[]; districts: IndexDistrict[]; legalityKnown: boolean; rivers: RiverIndex }> {
+export async function loadSites(): Promise<{ sites: Site[]; districts: IndexDistrict[]; legalityKnown: boolean; rivers: RiverIndex; legacyFallback: boolean }> {
   const db = await getDb();
   const districts = await loadDistrictInfo();
   const rivers = await loadRiverIndex();
-  const history = toRows<Row>(
-    await db.execute(sql`
-      select id::text, scan_month as month, centroid_lon::float lon, centroid_lat::float lat, area_ha::float ha, district_id::text,
+  const cols = sql`id::text, source_event_id, properties->>'cohort' cohort, centroid_lon::float lon, centroid_lat::float lat, area_ha::float ha, district_id::text,
         type, method_version, properties->>'signature' sig, confidence,
         properties->'placement'->>'protectedArea' reserve, properties->'placement'->>'mine' mine,
-        properties->>'licensedMine' licensed, properties->>'licence' licence
-      from history_events where centroid_lon is not null`),
+        properties->>'licensedMine' licensed, properties->>'licence' licence`;
+  const multisensor = toRows<Row>(
+    await db.execute(sql`select scan_month as month, ${cols} from history_events
+      where centroid_lon is not null and method_version like 's2-galamsey-3.%' and properties->>'cohort' = 'true'`),
   );
-  const live = toRows<Row>(
-    await db.execute(sql`
-      select id::text, to_char(coalesce(first_image_date, image_date), 'YYYY-MM') as month, centroid_lon::float lon, centroid_lat::float lat,
-        area_ha::float ha, district_id::text, type, method_version, properties->>'signature' sig, confidence,
-        properties->'placement'->>'protectedArea' reserve, properties->'placement'->>'mine' mine,
-        properties->>'licensedMine' licensed, properties->>'licence' licence
+  const legacyFallback = multisensor.length === 0;
+  const history = legacyFallback
+    ? toRows<Row>(await db.execute(sql`select scan_month as month, ${cols} from history_events where centroid_lon is not null and method_version not like 's2-galamsey-3.%'`))
+    : multisensor;
+  const live = legacyFallback
+    ? toRows<Row>(
+        await db.execute(sql`
+      select to_char(coalesce(first_image_date, image_date), 'YYYY-MM') as month, ${cols}
       from change_events
       where status <> 'dismissed' and centroid_lon is not null
-        and (method_version like 's2-galamsey-%' or method_version like 's1-water-%')`),
-  );
+        and ((method_version like 's2-galamsey-%' and method_version not like 's2-galamsey-3.%') or method_version like 's1-water-%')`),
+      )
+    : [];
   const [cad] = toRows<{ n: number }>(await db.execute(sql`select count(*)::int n from context_features where kind = 'licence'`));
   const legalityKnown = Number(cad?.n ?? 0) > 0;
   const toSighting = (r: Row): Sighting => {
@@ -72,10 +84,11 @@ export async function loadSites(): Promise<{ sites: Site[]; districts: IndexDist
       inRiverBuffer: rivers.nearest(Number(r.lon), Number(r.lat), RIVER_BUFFER_M) !== null,
       legality,
       inMine,
+      ...(r.cohort === "true" ? { addsArea: true, siteKey: r.source_event_id ?? null } : {}),
     };
   };
   const sightings = [...history, ...live].filter((r) => /^20\d\d-\d\d$/.test(r.month)).map(toSighting);
-  return { sites: assignSites(sightings), districts, legalityKnown, rivers };
+  return { sites: assignSites(sightings), districts, legalityKnown, rivers, legacyFallback };
 }
 
 export async function loadRiverIndex(): Promise<RiverIndex> {

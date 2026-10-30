@@ -11,6 +11,7 @@ import { fromProj, processCell, type CellResult, type CellSpec } from "../s2/pro
 import { SurfaceWater } from "../context/surface-water";
 import { dueCells } from "../s2/cells";
 import type { Scene } from "../s2/stac";
+import { detector } from "../ts/mode";
 
 /**
  * Nationwide galamsey detection from Sentinel-2 L2A.
@@ -30,6 +31,9 @@ import type { Scene } from "../s2/stac";
  *    where silt from mining is the dominant cause).
  * Each detection is then placed against OpenStreetMap schools, cemeteries,
  * clinics, settlements, farmland and protected areas by the pipeline runner.
+ *
+ * Since the multi-sensor detector (adapters/timeseries.ts) took over galamsey on land, this scan runs only
+ * on the mining-belt cells and reports only rivers that turned muddy, unless GW_DETECTOR=legacy.
  */
 const SLUG = "cdse-sentinel-2";
 // 2.3 is the relaxed one-clear-pass rule (S2_MIN_AFTER_OBS=1); 2.2 the two-pass rule.
@@ -49,7 +53,10 @@ export const sentinel2Adapter: Adapter = {
     // S2_IMPORT_DIR reads finished cells from a scan run elsewhere (src/pipeline/s2/remote-scan.ts) instead of
     // downloading imagery here; they are saved exactly as a local scan would save them.
     const importDir = process.env.S2_IMPORT_DIR ?? null;
-    const queue = importDir ? (await db.select().from(analysisCells)).filter((c) => existsSync(join(importDir, `${c.id}.json`))) : only ? (await dueCells(db, ctx.now, 10_000)).filter((c) => only.has(c.id)) : await dueCells(db, ctx.now, maxCells);
+    const riversOnly = detector() !== "legacy";
+    const queue = (importDir ? (await db.select().from(analysisCells)).filter((c) => existsSync(join(importDir, `${c.id}.json`))) : only ? (await dueCells(db, ctx.now, 10_000)).filter((c) => only.has(c.id)) : await dueCells(db, ctx.now, maxCells)).filter(
+      (c) => !riversOnly || c.priority >= 2,
+    );
     const water = new SurfaceWater();
     const events: NormalisedEvent[] = [];
     const notes: string[] = [];
@@ -67,7 +74,9 @@ export const sentinel2Adapter: Adapter = {
         } else {
           out = await scanCell(c, ctx.now, ctx.fetchJson, ctx.log, water);
         }
-        const { status, note, evs } = out;
+        const { status, note } = out;
+        // Muddy rivers only, when the multi-sensor detector handles land.
+        const evs = riversOnly ? out.evs.filter((e) => e.type === "water_change") : out.evs;
         const scannedAt = new Date(out.scannedAt);
         if (status === "failed") notes.push(`${c.id}: ${note}`);
         // Save this cell's detections now, so a stopped run never loses finished cells. A failed save
@@ -103,7 +112,8 @@ export const sentinel2Adapter: Adapter = {
                 .execute(
                   sql`update change_events set status = 'dismissed',
                     properties = coalesce(properties, '{}'::jsonb) || jsonb_build_object('autoDismissed', ${`not found again when the area was rescanned on ${scannedAt.toISOString().slice(0, 10)}`}::text)
-                  where method_version like 's2-galamsey-%' and status = 'new' and properties->>'cell' = ${c.id}::text
+                  where method_version like 's2-galamsey-2.%' and status = 'new' and properties->>'cell' = ${c.id}::text
+                    and (${!riversOnly} or type = 'water_change')
                     and source_event_id not in (select jsonb_array_elements_text(${JSON.stringify(keep)}::text::jsonb))`,
                 )
                 .then(() => undefined),
