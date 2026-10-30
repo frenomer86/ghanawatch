@@ -1,4 +1,5 @@
 results/cache/
 results/*.pt
-results_gbm.log
+results/gbm_full.txt
+results_*.log
 __pycache__/
