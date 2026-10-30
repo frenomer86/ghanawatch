@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { eventsQuery } from "@/lib/domain/validation";
 import { iterateEvents, listEvents } from "@/lib/db/repo/events";
-import { enforceRateLimit, handle, json, parseQuery } from "@/lib/server/http";
+import { enforceRateLimit, handle, heavyWork, json, parseQuery } from "@/lib/server/http";
 import { csvStream, eventToCsvRow, eventToFeature, featureCollectionWithMeta } from "@/lib/server/export";
 
 /**
@@ -10,7 +10,9 @@ import { csvStream, eventToCsvRow, eventToFeature, featureCollectionWithMeta } f
  * ?format=csv|geojson streams up to 50 000 rows for research use.
  */
 export const GET = handle(async (req: NextRequest) => {
-  enforceRateLimit(req, "public");
+  // A download reads up to 50 000 rows; it counts against the "heavy" limit, a page of 50 does not.
+  const format = req.nextUrl.searchParams.get("format");
+  enforceRateLimit(req, format === "csv" || format === "geojson" ? "heavy" : "public");
   const q = parseQuery(req, eventsQuery);
   const locale = req.nextUrl.searchParams.get("lang") === "tw" ? "tw" : "en";
 
@@ -23,8 +25,11 @@ export const GET = handle(async (req: NextRequest) => {
   }
 
   if (q.format === "geojson") {
-    const features = [];
-    for await (const e of iterateEvents(q, locale, 20_000)) features.push(eventToFeature(e));
+    const features = await heavyWork(async () => {
+      const out = [];
+      for await (const e of iterateEvents(q, locale, 20_000)) out.push(eventToFeature(e));
+      return out;
+    });
     return json(featureCollectionWithMeta(features), {
       cache: "short",
       headers: { "content-type": "application/geo+json; charset=utf-8" },
