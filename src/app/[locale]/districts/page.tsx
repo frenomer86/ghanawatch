@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { setRequestLocale } from "next-intl/server";
+import { getLocale, setRequestLocale } from "next-intl/server";
 import { CalendarDays, Trees } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
-import { Link } from "@/i18n/navigation";
+import { getPathname, Link } from "@/i18n/navigation";
+import type { Locale } from "@/lib/domain/types";
 import { scorecards } from "@/lib/db/repo/scorecards";
 import { shareOfArea, type DistrictCard } from "@/lib/domain/scorecards";
 import { AppShell } from "@/components/layout/app-shell";
@@ -63,6 +64,7 @@ export default async function DistrictsPage({ params, searchParams }: PageProps<
 async function Ranking({ searchParams }: { searchParams: PageProps<"/[locale]/districts">["searchParams"] }) {
   await connection();
   const sp = await searchParams;
+  const locale = (await getLocale()) as Locale;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const s = await scorecards();
   const regions = [...new Set(s.districts.map((d) => d.region).filter((r): r is string => !!r))].sort();
@@ -123,9 +125,10 @@ async function Ranking({ searchParams }: { searchParams: PageProps<"/[locale]/di
                 <tr key={d.id}>
                   <td className="tabular-nums">{d.rank ?? "–"}</td>
                   <td>
-                    <Link href={`/districts/${d.slug}`} className="font-medium text-link underline-offset-2 hover:underline">
+                    {/* A plain link: 260 client <Link>s would each hydrate and prefetch their scorecard. */}
+                    <a href={getPathname({ href: `/districts/${d.slug}`, locale })} className="font-medium text-link underline-offset-2 hover:underline">
                       {d.name}
-                    </Link>
+                    </a>
                     <div className="text-xs font-normal text-muted-foreground">{d.region?.replace(/ Region$/, "")}</div>
                   </td>
                   <td className="tabular-nums">

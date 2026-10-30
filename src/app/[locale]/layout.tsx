@@ -4,8 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { resolveLocale } from "@/i18n/locale";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
+import { LazyToaster } from "@/components/ui/lazy-toaster";
 import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import "../globals.css";
 
@@ -65,11 +64,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     <html lang={locale} className={`${heading.variable} ${body.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col">
         <NextIntlClientProvider>
-          <TooltipProvider delayDuration={200}>
-            {children}
-            <Toaster position="bottom-center" />
-            <RegisterServiceWorker />
-          </TooltipProvider>
+          {/* No component uses a tooltip, so there is no TooltipProvider here (it pulled the tooltip and
+              positioning code into every page); add one around the component that needs it. */}
+          {children}
+          <LazyToaster position="bottom-center" />
+          <RegisterServiceWorker />
         </NextIntlClientProvider>
       </body>
     </html>

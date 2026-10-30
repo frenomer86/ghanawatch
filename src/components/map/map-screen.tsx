@@ -25,7 +25,11 @@ import type { HotspotProps, MapHandle } from "./map-view";
 import type { MapFilters, MapInitialState, ViewState } from "./map-params";
 import { cn } from "@/lib/utils";
 
-const MapView = dynamic(() => import("./map-view").then((m) => m.MapView), {
+// The map library is about 1 MB. Its download starts as soon as this module runs in the browser, in
+// parallel with hydration, instead of after the page has hydrated and rendered the placeholder.
+const loadMapView = () => import("./map-view").then((m) => m.MapView);
+if (typeof window !== "undefined") void loadMapView().catch(() => undefined);
+const MapView = dynamic(loadMapView, {
   ssr: false,
   loading: () => <Skeleton className="absolute inset-0 rounded-none" />,
 });

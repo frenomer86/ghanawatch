@@ -1,10 +1,17 @@
-import { Link } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
+import { getPathname } from "@/i18n/navigation";
+import type { Locale } from "@/lib/domain/types";
 import type { DistrictMonth } from "@/lib/server/index/read";
 import { fmtHa } from "@/components/scorecards/stat";
 import { RankArrow } from "./rank-arrow";
 
-/** The league table of a closed month: the districts with new mining, by index. */
+/**
+ * The league table of a closed month: the districts with new mining, by index. District names are plain
+ * links, not client-side <Link>s: a table of up to 260 rows would otherwise hydrate a client component
+ * per row and prefetch every scorecard that scrolls into view, which is a lot of mobile data.
+ */
 export function LeagueTable({ rows, compact = false }: { rows: DistrictMonth[]; compact?: boolean }) {
+  const locale = useLocale() as Locale;
   const ranked = rows.filter((r) => r.rank != null);
   if (!ranked.length) return <p className="text-sm text-muted-foreground">No district had new likely mining first seen this month.</p>;
   return (
@@ -26,9 +33,9 @@ export function LeagueTable({ rows, compact = false }: { rows: DistrictMonth[]; 
             <tr key={r.districtId}>
               <td className="tabular-nums">{r.rank}</td>
               <td>
-                <Link href={`/districts/${r.slug}`} className="font-medium text-link underline-offset-2 hover:underline">
+                <a href={getPathname({ href: `/districts/${r.slug}`, locale })} className="font-medium text-link underline-offset-2 hover:underline">
                   {r.name}
-                </Link>
+                </a>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span>{r.region?.replace(/ Region$/, "")}</span>
                   <RankArrow movement={r.movement} />

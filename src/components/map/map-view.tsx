@@ -125,6 +125,9 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       pitchWithRotate: false,
       dragRotate: false,
       touchPitch: false,
+      // Labels appear at once instead of fading in over 300 ms: every fade is a run of redrawn frames,
+      // which on a phone's GPU (and far more in software rendering) keeps the main thread busy.
+      fadeDuration: 0,
     });
     mapRef.current = map;
     // Exposed for browser-console inspection and end-to-end tests.
