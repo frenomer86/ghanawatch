@@ -274,5 +274,63 @@
     1978699.71566391
    ]
   ]
+ },
+ "Old detector's inputs (B2,B3,B4,B8,B11 + its 4 indices)": {
+  "features": [
+   "B02",
+   "B03",
+   "B04",
+   "B08",
+   "B11",
+   "NDVI",
+   "BSI",
+   "NDWI",
+   "NDTI"
+  ],
+  "IoU": 0.5367420702287068,
+  "precision": 0.5646117516468095,
+  "recall": 0.9157813547142372,
+  "F1": 0.6985454236296477
+ },
+ "Radar + terrain only (cloud months)": {
+  "features": [
+   "VV",
+   "VH",
+   "VH_VV",
+   "SLOPE",
+   "REL_ELEV",
+   "VV_SD5"
+  ],
+  "IoU": 0.2855990578047574,
+  "precision": 0.32360509772902313,
+  "recall": 0.7086037579435931,
+  "F1": 0.44430502040416253
+ },
+ "Landsat-equivalent bands + radar + terrain": {
+  "features": [
+   "B02",
+   "B03",
+   "B04",
+   "B8A",
+   "B11",
+   "B12",
+   "NDWI",
+   "MNDWI",
+   "BSI",
+   "NDTI",
+   "VV",
+   "VH",
+   "VH_VV",
+   "SLOPE",
+   "REL_ELEV",
+   "MNDWI_SD5",
+   "VV_SD5",
+   "BSI_M15",
+   "MNDWI_M15"
+  ],
+  "IoU": 0.6203582786574628,
+  "precision": 0.6406811153232242,
+  "recall": 0.9513545504334034,
+  "F1": 0.7657050750176764
  }
 }
