@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { gunzipSync } from "node:zlib";
 import { sql } from "drizzle-orm";
 import type { Polygon } from "geojson";
 import { analysisCells, historyEvents, historyProgress } from "@/lib/db/schema";
@@ -9,6 +8,7 @@ import { stableId } from "@/lib/server/ids";
 import { monthOf, previousMonth } from "@/lib/domain/index";
 import { NotConnectedError, type Adapter, type NormalisedEvent } from "./types";
 import { detector } from "../ts/mode";
+import { stateLastMonth, UNDER_MINING_SHARE } from "../ts/handover";
 import { cellLayout, DATA_DIR, processCellMonth, STATE_RES, type CellMonthResult, type CellRow } from "../ts/cell";
 import { loadModel, type MiningModel } from "../ts/model";
 import { siteHull, type TsSite } from "../ts/sites";
@@ -50,7 +50,7 @@ export const timeseriesAdapter: Adapter = {
   slug: SLUG,
   async run(ctx) {
     if (!ctx.db) throw new Error("database handle required");
-    if (detector() === "legacy") throw new NotConnectedError("GW_DETECTOR=legacy: the two-date Sentinel-2 scan is the live detector");
+    if (detector() === "legacy") throw new NotConnectedError(process.env.GW_DETECTOR === "legacy" ? "GW_DETECTOR=legacy: the two-date Sentinel-2 scan is the live detector" : "model files missing (models/gw_mining_unet.onnx, .json): the two-date Sentinel-2 scan stays the live detector");
     const db = ctx.db;
     const model = await loadModel();
     const budgetMs = Number(process.env.GW_TS_BUDGET_MINUTES ?? 60) * 60_000;
@@ -104,13 +104,7 @@ export const timeseriesAdapter: Adapter = {
  * then cells whose month-in-progress preview is oldest.
  */
 export function dueTrackerCells<T extends CellRow>(cells: T[], now: Date): T[] {
-  const behind = (c: T) => {
-    const p = join(DATA_DIR, "state", `${c.id}.gwts`);
-    if (!existsSync(p)) return -1;
-    const raw = readFileSync(p);
-    const b = raw[0] === 0x1f && raw[1] === 0x8b ? gunzipSync(raw) : raw;
-    return b.readInt32LE(16);
-  };
+  const behind = (c: T) => stateLastMonth(c.id);
   const lastPreview = (c: T) => {
     const p = join(DATA_DIR, "preview", `${c.id}.json`);
     return existsSync(p) ? Number(JSON.parse(readFileSync(p, "utf8")).at ?? 0) : 0;
@@ -134,15 +128,27 @@ function markPreview(cellId: string, now: Date) {
 }
 
 /**
- * Land detections of the earlier methods inside a cell the new detector now covers are hidden as
- * superseded (not deleted; anything a moderator reviewed stays). Muddy-river detections are kept.
+ * Once a cell is current, the 2.x land galamsey there (pits, cleared ground with pits, radar ponds) is hidden
+ * as superseded by the tracker's sites (not deleted; anything a moderator reviewed stays). Muddy rivers stay,
+ * and so does 2.x cleared land (the cleared-land lines of the district and reserve cards), except where it lies
+ * within one of the tracker's mining sites, which already counts it; that is hidden as an automatic check, so
+ * it comes back if a later scan finds it outside a site.
  */
-async function supersedeLegacy(db: Db, c: CellRow) {
+export async function supersedeLegacy(db: Db, c: CellRow) {
   await db.execute(sql`update change_events set status = 'dismissed',
       properties = coalesce(properties, '{}'::jsonb) || jsonb_build_object('supersededBy', ${METHOD}::text)
     where status = 'new' and (
-      (method_version like 's2-galamsey-2.%' and type = 'surface_disturbance' and properties->>'cell' = ${c.id}::text)
+      (method_version like 's2-galamsey-2.%' and type = 'surface_disturbance' and properties->>'cell' = ${c.id}::text
+        and coalesce(properties->>'signature', '') <> 'cleared')
       or (method_version like 's1-water-%' and centroid_lon >= ${c.minLon} and centroid_lon < ${c.maxLon} and centroid_lat >= ${c.minLat} and centroid_lat < ${c.maxLat}))`);
+  await db.execute(sql`update change_events e set status = 'dismissed',
+      properties = coalesce(e.properties, '{}'::jsonb) || jsonb_build_object('autoDismissed', 'part of a mining site mapped by the monthly multi-sensor record')
+    where e.status = 'new' and e.method_version like 's2-galamsey-2.%' and e.properties->>'signature' = 'cleared' and e.properties->>'cell' = ${c.id}::text
+      and exists (select 1 from change_events m
+        where m.method_version = ${METHOD} and m.status <> 'dismissed' and m.properties->>'cell' = ${c.id}::text
+          and greatest(0, least(e.bbox_max_lon, m.bbox_max_lon) - greatest(e.bbox_min_lon, m.bbox_min_lon))
+            * greatest(0, least(e.bbox_max_lat, m.bbox_max_lat) - greatest(e.bbox_min_lat, m.bbox_min_lat))
+            >= ${UNDER_MINING_SHARE} * (e.bbox_max_lon - e.bbox_min_lon) * (e.bbox_max_lat - e.bbox_min_lat))`);
 }
 
 /**

@@ -9,7 +9,7 @@ import { projectStructures, riverWindows, scanRiverWindow, type RiverLine, type 
 import { hull, radarPonds, type RadarPond } from "@/pipeline/s1/water";
 import { SurfaceWater, type WaterSeen } from "@/pipeline/context/surface-water";
 import type { Adapter, AdapterContext, NormalisedEvent } from "./types";
-import { detector } from "../ts/mode";
+import { handedOver } from "../ts/handover";
 
 /**
  * Sentinel-1 radar (Microsoft Planetary Computer, keyless), which sees
@@ -78,8 +78,8 @@ export const sentinel1Adapter: Adapter = {
 
     // --- Ponds through cloud -----------------------------------------------
     const events: NormalisedEvent[] = [];
-    // New ponds through cloud are part of the multi-sensor detector now (radar every month, every cell).
-    if (detector() !== "legacy") return { events, notes, extra: { riverReflections: targetsFound, dredgerTagsForReview: flagged, radarPonds: 0, cells: 0 } };
+    // New ponds through cloud are part of the multi-sensor detector (radar every month) in cells it has taken
+    // over (ts/handover.ts); elsewhere this check runs as before.
     const maxCells = num(process.env.S1_MAX_CELLS, 40);
     const stale = new Date(ctx.now.getTime() - 6 * DAY);
     const cells = await db
@@ -88,7 +88,8 @@ export const sentinel1Adapter: Adapter = {
       .leftJoin(radarCells, eq(radarCells.cellId, analysisCells.id))
       .where(and(lt(analysisCells.coverageAfter, 40), or(isNull(radarCells.lastRunAt), lt(radarCells.lastRunAt, stale))))
       .orderBy(desc(analysisCells.priority), asc(analysisCells.coverageAfter))
-      .limit(maxCells);
+      .limit(maxCells * 4)
+      .then((rows) => rows.filter((c) => !handedOver(c.id, ctx.now)).slice(0, maxCells));
     let pondCount = 0;
     const water = new SurfaceWater();
     for (const cell of cells) {

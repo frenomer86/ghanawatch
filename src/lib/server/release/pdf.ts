@@ -229,10 +229,20 @@ export async function releasePdf(d: ReleaseData, origin: string, images: Feature
   newPage("How the index is made");
   gap(6);
   for (const p of [
-    "Detection. Every 0.2° cell of Ghana is scanned in rotation. A cloud-masked median of the clearest Sentinel-2 scenes of the last 120 days is compared with one from one to two years earlier; cleared ground with new water-filled pits, and clusters of new pits, are the galamsey signature. Radar (Sentinel-1) adds new ponds under cloud. Detections are placed against OpenStreetMap: reserves, towns, schools, clinics, named mines.",
-    "Checks. Lone clearings, lone ponds, building in towns, the lake shores and the coastal plains move to low confidence; a second source (Global Forest Watch alerts) raises confidence; named large-scale mines are labelled and never counted.",
-    "Sites. A detection within about 200 m of an earlier one is the same site. A site counts in the month it was first seen; a rescan that confirms it does not make it new again.",
-    "Index. new_ha is the area of sites first seen in the month, outside named mines; the index is new_ha per 100 km² of the district; cumulative is the running sum. Rank 1 is the highest index.",
+    ...(d.multisensor
+      ? [
+          "Detection. Every 0.2° cell of Ghana has a monthly record since 2017. Each month, every Sentinel-2 image is composited in all ten bands with per-pixel cloud, haze and shadow screening; Landsat 8 and 9 fill what cloud hid, cross-calibrated to Sentinel-2; Sentinel-1 radar (VV and VH) sees through cloud; the Copernicus DEM gives slope and relative height. A U-Net trained on hand-mapped Ghanaian mines (SmallMinesDS) scores the 24 inputs, and a per-pixel hidden Markov tracker accumulates the months: a square is mined only once the evidence holds, and its onset month never moves. Sites are placed against OpenStreetMap: reserves, towns, schools, clinics, named mines.",
+          "Checks. The savannah north, the lake shores and the coastal plains move to low confidence unless the signal is very strong; a site a moderator or the monthly confirmation sample rejects leaves the index; named large-scale mines are labelled and never counted.",
+          "Sites. Connected mined squares of at least 0.3 ha form a site, named by its earliest ground so it keeps its name as it grows. A month counts the ground confirmed in that month only, so neither a site nor its spread is counted twice.",
+        ]
+      : [
+          "Detection. Every 0.2° cell of Ghana is scanned in rotation. A cloud-masked median of the clearest Sentinel-2 scenes of the last 120 days is compared with one from one to two years earlier; cleared ground with new water-filled pits, and clusters of new pits, are the galamsey signature. Radar (Sentinel-1) adds new ponds under cloud. Detections are placed against OpenStreetMap: reserves, towns, schools, clinics, named mines.",
+          "Checks. Lone clearings, lone ponds, building in towns, the lake shores and the coastal plains move to low confidence; a second source (Global Forest Watch alerts) raises confidence; named large-scale mines are labelled and never counted.",
+          "Sites. A detection within about 200 m of an earlier one is the same site. A site counts in the month it was first seen; a rescan that confirms it does not make it new again.",
+        ]),
+    d.multisensor
+      ? "Index. new_ha is the ground newly confirmed as mined in the month (new sites and the spread of existing ones), outside named mines; the index is new_ha per 100 km² of the district; cumulative is the running sum. Rank 1 is the highest index."
+      : "Index. new_ha is the area of sites first seen in the month, outside named mines; the index is new_ha per 100 km² of the district; cumulative is the running sum. Rank 1 is the highest index.",
     `Uncertainty. The interval corrects mapped area for the latest measured precision (random detections checked by eye) and detection rate (blind squares), with Wilson 95% intervals on both.`,
     "Frozen numbers. A closed month never changes under the same index version. A method change creates a new version, reprocesses the whole series and is recorded on the corrections log at /data/methods.",
     "Limits. Cloud hides the ground for weeks in the rainy season; sites under 0.5 ha are below what the scan confirms; the savannah north is shown at low confidence; legality is unknown wherever the mining cadastre is not loaded. None of this is a legal finding.",

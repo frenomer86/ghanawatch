@@ -20,8 +20,18 @@ Research and training: `research/smallmines/*`, evaluation: `research/eval/*`.
 | Output | a detection when the two dates differ | a dated history per site: onset month, area by month, spreading or regrown |
 | Index | a site's first outline, in the month first seen | the area each site adds, in the month it is confirmed |
 
-The 2.x scan still runs for one job: muddy rivers in the mining belt (river pages). The radar adapter keeps
-its river watch for dredgers. Set `GW_DETECTOR=legacy` to return to 2.x completely.
+**Handover, cell by cell (`ts/handover.ts`).** A cell's land galamsey stays with 2.x until the tracker's
+monthly record of that cell reaches the present (within two months); from then on it belongs to 3.0, whose
+first publication there supersedes the 2.x pits, cleared ground with pits and radar ponds of that cell. The
+2.x scan keeps running everywhere for the two jobs 3.0 does not do: muddy rivers (river pages) and cleared
+land that is not part of a mining site (farms, roads, building, logging), which feeds the cleared-land lines of
+the district and forest-reserve cards; cleared ground lying mostly within a 3.0 site's outline is dropped, since
+the site already counts it. The radar adapter keeps its river watch for dredgers everywhere, and its ponds
+through cloud in cells not yet handed over. So nothing goes dark while the national backfill runs, and nothing
+is counted twice once it has (`tests/integration/detector-handover.test.ts`).
+
+Set `GW_DETECTOR=legacy` to return to 2.x completely; a machine without the model files
+(`models/gw_mining_unet.onnx` and `.json`) also runs 2.x, so land detection never stops.
 
 ## 2. Monthly composite (`ts/composite.ts`)
 

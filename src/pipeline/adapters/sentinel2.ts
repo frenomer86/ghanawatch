@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import type { Polygon } from "geojson";
 import { stableId } from "@/lib/server/ids";
-import { areaHectares, centroidOf } from "@/lib/geo";
+import { areaHectares, bboxOf, centroidOf } from "@/lib/geo";
 import { analysisCells } from "@/lib/db/schema";
 import type { Adapter, NormalisedEvent } from "./types";
 import { hullMetres, type Component, type Composite } from "../s2/analysis";
@@ -11,7 +11,7 @@ import { fromProj, processCell, type CellResult, type CellSpec } from "../s2/pro
 import { SurfaceWater } from "../context/surface-water";
 import { dueCells } from "../s2/cells";
 import type { Scene } from "../s2/stac";
-import { detector } from "../ts/mode";
+import { coveredShare, handedOver, liveSiteBoxes, UNDER_MINING_SHARE } from "../ts/handover";
 
 /**
  * Nationwide galamsey detection from Sentinel-2 L2A.
@@ -32,8 +32,11 @@ import { detector } from "../ts/mode";
  * Each detection is then placed against OpenStreetMap schools, cemeteries,
  * clinics, settlements, farmland and protected areas by the pipeline runner.
  *
- * Since the multi-sensor detector (adapters/timeseries.ts) took over galamsey on land, this scan runs only
- * on the mining-belt cells and reports only rivers that turned muddy, unless GW_DETECTOR=legacy.
+ * Handover to the multi-sensor detector (adapters/timeseries.ts, ts/handover.ts), cell by cell: once the
+ * tracker's record of a cell reaches the present, this scan reports there only muddy rivers and cleared land
+ * that is not part of a mining site the tracker maps (farms, roads, building, logging: the cleared-land lines
+ * of the district and forest-reserve cards); pits and cleared ground with pits are the tracker's. Until then,
+ * and everywhere with GW_DETECTOR=legacy, it reports everything as before.
  */
 const SLUG = "cdse-sentinel-2";
 // 2.3 is the relaxed one-clear-pass rule (S2_MIN_AFTER_OBS=1); 2.2 the two-pass rule.
@@ -53,10 +56,7 @@ export const sentinel2Adapter: Adapter = {
     // S2_IMPORT_DIR reads finished cells from a scan run elsewhere (src/pipeline/s2/remote-scan.ts) instead of
     // downloading imagery here; they are saved exactly as a local scan would save them.
     const importDir = process.env.S2_IMPORT_DIR ?? null;
-    const riversOnly = detector() !== "legacy";
-    const queue = (importDir ? (await db.select().from(analysisCells)).filter((c) => existsSync(join(importDir, `${c.id}.json`))) : only ? (await dueCells(db, ctx.now, 10_000)).filter((c) => only.has(c.id)) : await dueCells(db, ctx.now, maxCells)).filter(
-      (c) => !riversOnly || c.priority >= 2,
-    );
+    const queue = importDir ? (await db.select().from(analysisCells)).filter((c) => existsSync(join(importDir, `${c.id}.json`))) : only ? (await dueCells(db, ctx.now, 10_000)).filter((c) => only.has(c.id)) : await dueCells(db, ctx.now, maxCells);
     const water = new SurfaceWater();
     const events: NormalisedEvent[] = [];
     const notes: string[] = [];
@@ -75,8 +75,15 @@ export const sentinel2Adapter: Adapter = {
           out = await scanCell(c, ctx.now, ctx.fetchJson, ctx.log, water);
         }
         const { status, note } = out;
-        // Muddy rivers only, when the multi-sensor detector handles land.
-        const evs = riversOnly ? out.evs.filter((e) => e.type === "water_change") : out.evs;
+        // Where the multi-sensor tracker has the cell: muddy rivers, and cleared land outside its mining sites.
+        const handed = handedOver(c.id, ctx.now);
+        let evs = out.evs;
+        if (handed) {
+          const sites = await liveSiteBoxes(db, c.id);
+          evs = out.evs.filter(
+            (e) => e.type === "water_change" || (e.properties?.signature === "cleared" && coveredShare(bboxOf(e.geom), sites) < UNDER_MINING_SHARE),
+          );
+        }
         const scannedAt = new Date(out.scannedAt);
         if (status === "failed") notes.push(`${c.id}: ${note}`);
         // Save this cell's detections now, so a stopped run never loses finished cells. A failed save
@@ -113,7 +120,7 @@ export const sentinel2Adapter: Adapter = {
                   sql`update change_events set status = 'dismissed',
                     properties = coalesce(properties, '{}'::jsonb) || jsonb_build_object('autoDismissed', ${`not found again when the area was rescanned on ${scannedAt.toISOString().slice(0, 10)}`}::text)
                   where method_version like 's2-galamsey-2.%' and status = 'new' and properties->>'cell' = ${c.id}::text
-                    and (${!riversOnly} or type = 'water_change')
+                    and (${!handed} or type = 'water_change' or properties->>'signature' = 'cleared')
                     and source_event_id not in (select jsonb_array_elements_text(${JSON.stringify(keep)}::text::jsonb))`,
                 )
                 .then(() => undefined),

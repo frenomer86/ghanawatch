@@ -54,6 +54,8 @@ export interface Site {
   members: string[];
   /** Area added per month (YYYY-MM -> ha), for sites from the multi-sensor detector. */
   additions?: Record<string, number>;
+  /** The multi-sensor detector's site keys folded into this site (its live detections' source ids). */
+  keys?: string[];
 }
 
 /** The hectares a site contributes to a month: its additions that month, or its first-seen area in its first month. */
@@ -105,6 +107,10 @@ export function assignSites(sightings: Sighting[]): Site[] {
       if (!best.districtId) best.districtId = s.districtId;
       best.sightings++;
       best.members.push(s.id);
+      if (s.siteKey && !best.keys?.includes(s.siteKey)) {
+        (best.keys ??= []).push(s.siteKey);
+        if (!byKey.has(s.siteKey)) byKey.set(s.siteKey, best);
+      }
       continue;
     }
     const site: Site = {
@@ -125,6 +131,7 @@ export function assignSites(sightings: Sighting[]): Site[] {
       sightings: 1,
       members: [s.id],
       ...(s.addsArea ? { additions: { [s.month]: s.areaHa } } : {}),
+      ...(s.siteKey ? { keys: [s.siteKey] } : {}),
     };
     sites.push(site);
     if (s.siteKey) byKey.set(s.siteKey, site);

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import type { Geometry } from "geojson";
 import { getDb, rows as toRows } from "@/lib/db/client";
 import { INDEX_VERSION, monthLabel } from "@/lib/domain/index";
+import { newAreaIn } from "@/lib/domain/sites";
 import { slugify } from "@/lib/domain/scorecards";
 import { loadSites } from "@/lib/server/index/sightings";
 import { districtSeries, nationalMonth, nationalSeries, rankings, type DistrictMonth, type NationalMonth } from "@/lib/server/index/read";
@@ -16,7 +17,10 @@ export interface ReleaseSite {
   firstMonth: string;
   districtId: string | null;
   districtName: string | null;
+  /** Hectares this site adds to the month's index: all of it when new, its spread otherwise. */
   areaHa: number;
+  /** Whether the site was first seen this month (false: an existing site that spread). */
+  newSite: boolean;
   lon: number;
   lat: number;
   reserve: string | null;
@@ -41,6 +45,9 @@ export interface ReleaseData {
   month: string;
   label: string;
   version: string;
+  /** True when the index counts the multi-sensor record (area newly confirmed each month, new and spreading
+   *  sites); false while it still falls back to the two-date scan (area of sites first seen in the month). */
+  multisensor: boolean;
   national: NationalMonth;
   series: NationalMonth[];
   rankings: DistrictMonth[];
@@ -61,23 +68,38 @@ export async function releaseData(month: string): Promise<ReleaseData> {
   const [series, ranks, rivers, loaded] = await Promise.all([nationalSeries(), rankings(month), riverScores(month), loadSites()]);
   const db = await getDb();
   const names = new Map(loaded.districts.map((d) => [d.id, d.name]));
-  const monthSites = loaded.sites.filter((s) => s.likely && !s.inMine && s.firstMonth === month);
+  // Every site that adds hectares to the month: new sites, and (multi-sensor record) existing sites that spread.
+  const monthSites = loaded.sites.filter((s) => s.likely && !s.inMine && newAreaIn(s, month) > 0);
+  // The live detection of each site, for its title and pictures: by event id (two-date scan sightings) or by the
+  // multi-sensor site key (its history rows are not detections).
   const memberIds = monthSites.flatMap((s) => s.members);
-  const live = new Map<string, { id: string; title: string; image_date: string; geom: Geometry | null }>();
+  const siteKeys = monthSites.flatMap((s) => s.keys ?? []);
+  type LiveRow = { id: string; key: string; title: string; image_date: string; geom: Geometry | null };
+  const live = new Map<string, LiveRow>();
+  const byKey = new Map<string, LiveRow>();
   for (let i = 0; i < memberIds.length; i += 500) {
-    for (const r of toRows<{ id: string; title: string; image_date: string; geom: Geometry | null }>(
-      await db.execute(sql`select id::text, title_en as title, image_date::text, geom from change_events where id::text in (select jsonb_array_elements_text(${JSON.stringify(memberIds.slice(i, i + 500))}::text::jsonb))`),
+    for (const r of toRows<LiveRow>(
+      await db.execute(sql`select id::text, source_event_id as key, title_en as title, image_date::text, geom from change_events where id::text in (select jsonb_array_elements_text(${JSON.stringify(memberIds.slice(i, i + 500))}::text::jsonb))`),
     ))
       live.set(r.id, r);
   }
+  for (let i = 0; i < siteKeys.length; i += 500) {
+    for (const r of toRows<LiveRow>(
+      await db.execute(sql`select id::text, source_event_id as key, title_en as title, image_date::text, geom from change_events
+        where method_version like 's2-galamsey-3.%' and status <> 'dismissed'
+          and source_event_id in (select jsonb_array_elements_text(${JSON.stringify(siteKeys.slice(i, i + 500))}::text::jsonb))`),
+    ))
+      byKey.set(r.key, r);
+  }
   const sites: ReleaseSite[] = monthSites.map((s) => {
-    const ev = s.members.map((m) => live.get(m)).find((x) => x);
+    const ev = s.members.map((m) => live.get(m)).find((x) => x) ?? (s.keys ?? []).map((k) => byKey.get(k)).find((x) => x);
     return {
       id: s.id,
       firstMonth: s.firstMonth,
       districtId: s.districtId,
       districtName: s.districtId ? (names.get(s.districtId) ?? null) : null,
-      areaHa: s.areaHa,
+      areaHa: Math.round(newAreaIn(s, month) * 100) / 100,
+      newSite: s.firstMonth === month,
       lon: s.lon,
       lat: s.lat,
       reserve: s.reserve,
@@ -89,7 +111,7 @@ export async function releaseData(month: string): Promise<ReleaseData> {
       geom: ev?.geom ?? null,
     };
   });
-  const featured = sites.filter((s) => s.eventId).sort((a, b) => b.areaHa - a.areaHa).slice(0, 6);
+  const featured = sites.filter((s) => s.eventId && s.newSite).sort((a, b) => b.areaHa - a.areaHa).slice(0, 6);
   const reservesMap = new Map<string, ReserveLoss & { _d: Set<string> }>();
   for (const s of sites) {
     if (!s.reserve) continue;
@@ -105,6 +127,7 @@ export async function releaseData(month: string): Promise<ReleaseData> {
     month,
     label: monthLabel(month),
     version: INDEX_VERSION,
+    multisensor: !loaded.legacyFallback,
     national,
     series,
     rankings: ranks,

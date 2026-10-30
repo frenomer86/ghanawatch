@@ -133,7 +133,7 @@ export async function runRelease(opts: ReleaseOptions): Promise<ReleaseResult> {
     month,
     label: d.label,
     indexVersion: INDEX_VERSION,
-    detectionMethod: process.env.GW_DETECTOR === "legacy" ? "s2-galamsey-2.3 + s1-water-1.0" : "s2-galamsey-3.0 (monthly multi-sensor record)",
+    detectionMethod: !d.multisensor ? "s2-galamsey-2.3 + s1-water-1.0" : "s2-galamsey-3.0 (monthly multi-sensor record)",
     generatedAt: new Date().toISOString(),
     gitCommit: gitCommit(),
     headline: press.headline,

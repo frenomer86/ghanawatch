@@ -1,9 +1,10 @@
-import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { MultiPolygon, Polygon, Position } from "geojson";
 import { getDb } from "@/lib/db/client";
 import { changeEvents, contextFeatures } from "@/lib/db/schema";
 import { districtContaining } from "@/lib/db/repo/boundaries";
 import type { ChangeType } from "@/lib/domain/types";
+import { scoreKind } from "@/lib/domain/scorecards";
 import { distanceToPlotM, pointInRing, type Plot } from "./plot";
 
 /**
@@ -18,8 +19,6 @@ export interface PlotContext {
   detectionsOnPlot: Array<{ id: string; type: ChangeType; title: string; imageDate: string }>;
   nearestGalamsey: { id: string; title: string; imageDate: string; distanceM: number } | null;
 }
-
-const GALAMSEY_METHOD = "s2-galamsey";
 
 function rings(g: Polygon | MultiPolygon): Position[][] {
   return g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map((p) => p[0]);
@@ -52,6 +51,8 @@ export async function plotContext(plot: Plot): Promise<PlotContext> {
         lon: changeEvents.centroidLon,
         lat: changeEvents.centroidLat,
         method: changeEvents.methodVersion,
+        signature: sql<string | null>`${changeEvents.properties}->>'signature'`,
+        confidence: changeEvents.confidence,
       })
       .from(changeEvents)
       .where(
@@ -90,7 +91,10 @@ export async function plotContext(plot: Plot): Promise<PlotContext> {
   for (const e of events) {
     if (e.lon == null || e.lat == null) continue;
     if (pointInRing(e.lon, e.lat, plot.ring)) detectionsOnPlot.push({ id: e.id, type: e.type as ChangeType, title: e.title, imageDate: e.imageDate });
-    if (e.method?.startsWith(GALAMSEY_METHOD) && e.type !== "fire") {
+    // Suspected galamsey only: pits, mining footprints and radar ponds, as the district cards count them; not
+    // muddy rivers (the mining is upstream) or bare cleared land (farms and building look the same).
+    const k = e.method ? scoreKind({ type: e.type, methodVersion: e.method, signature: e.signature, confidence: e.confidence }).kind : "other";
+    if (k === "mining" || k === "possible" || k === "radar") {
       // Measured from the plot's edge, so a site on the plot is 0 m away.
       const distanceM = Math.round(distanceToPlotM(e.lon, e.lat, plot));
       if (!nearestGalamsey || distanceM < nearestGalamsey.distanceM) nearestGalamsey = { id: e.id, title: e.title, imageDate: e.imageDate, distanceM };
