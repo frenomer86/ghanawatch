@@ -36,6 +36,8 @@ export interface PublicCase {
   authority: Authority | null;
   photoUrl: string | null;
   satelliteCheck: SatelliteCheck | null;
+  /** Who confirmed it: the automatic check (src/lib/domain/auto-review.ts) or a moderator; null until published. */
+  checkedBy: "automatic" | "moderator" | null;
   timeline: CaseEvent[];
 }
 

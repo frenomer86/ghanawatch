@@ -27,3 +27,48 @@ export async function putObject(key: string, body: Buffer, contentType: string):
   await fs.writeFile(file, body);
   return { key, url: null };
 }
+
+function localPath(key: string): string {
+  const dir = path.resolve(process.cwd(), env().DATA_DIR, "uploads");
+  const file = path.join(dir, key);
+  const rel = path.relative(dir, file);
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("invalid storage key");
+  return file;
+}
+
+/** A stored object's bytes: `ref` is what putObject returned (the blob URL, or the local key). */
+export async function readObject(ref: string): Promise<Buffer | null> {
+  if (/^https:\/\//.test(ref)) {
+    const res = await fetch(ref, { signal: AbortSignal.timeout(30_000) });
+    return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
+  }
+  return fs.readFile(localPath(ref)).catch(() => null);
+}
+
+/**
+ * Replace a stored object (a photo after its faces are blurred). A local file is overwritten in place; a blob is
+ * written under a new random suffix and the old one deleted, so the returned reference must be saved.
+ */
+export async function replaceObject(ref: string, body: Buffer, contentType: string): Promise<string> {
+  if (/^https:\/\//.test(ref)) {
+    const e = env();
+    const { put, del } = await import("@vercel/blob");
+    const pathname = new URL(ref).pathname.replace(/^\//, "").replace(/-[A-Za-z0-9]{20,}(\.[a-z0-9]+)$/, "$1");
+    const res = await put(pathname, body, { access: "public", contentType, token: e.BLOB_READ_WRITE_TOKEN, addRandomSuffix: true });
+    await del(ref, { token: e.BLOB_READ_WRITE_TOKEN }).catch(() => undefined);
+    return res.url;
+  }
+  const file = localPath(ref);
+  await fs.writeFile(`${file}.tmp`, body);
+  await fs.rename(`${file}.tmp`, file);
+  return ref;
+}
+
+export async function deleteObject(ref: string): Promise<void> {
+  if (/^https:\/\//.test(ref)) {
+    const { del } = await import("@vercel/blob");
+    await del(ref, { token: env().BLOB_READ_WRITE_TOKEN });
+    return;
+  }
+  await fs.rm(localPath(ref), { force: true });
+}

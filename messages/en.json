@@ -277,16 +277,16 @@
   },
   "report": {
     "title": "Report what you see",
-    "intro": "Photos from the ground help confirm or correct what satellites detect. Every report is compared with GhanaWatch's satellite record and checked by a moderator before it is shown.",
+    "intro": "Photos from the ground help confirm or correct what satellites detect. Every report is checked automatically against the photo's own location, GhanaWatch's satellite record and other people's reports, and published as soon as something confirms it.",
     "photo": "Photo",
-    "photoHelp": "JPEG, PNG or WebP, up to 5 MB. Location data is removed from the photo before it is stored.",
+    "photoHelp": "JPEG, PNG or WebP, up to 5 MB. If your camera saved where the photo was taken, that is used to check the report and then removed from the photo; it is never shown. Faces are blurred.",
     "location": "Location",
     "locationHelp": "Use Near me, or find the place on the map and click it. You can drag the pin to adjust.",
     "description": "What did you see?",
     "descriptionHelp": "Up to 500 characters. Do not include names or details that identify people.",
     "submit": "Send report",
     "sending": "Sending",
-    "sent": "Report sent. A moderator will review it.",
+    "sent": "Report sent. It is being checked now.",
     "queued": "You are offline. The report is saved and will be sent when you reconnect.",
     "failed": "The report could not be sent. Check your connection and try again.",
     "consent": "I confirm this report is accurate to the best of my knowledge and does not identify any person.",
@@ -298,16 +298,21 @@
       "flooding": "Flooding",
       "other": "Something else"
     },
-    "anonymous": "You do not need an account and we never ask for your name. Location data is removed from your photo, and public pages show the place to about 100 m.",
+    "anonymous": "You do not need an account and we never ask for your name. Faces in photos are blurred, location data is removed from your photo, phone numbers and e-mail addresses are removed from your text, and public pages show the place to about 100 m.",
     "sentTitle": "Report sent",
-    "sentBody": "A moderator will check it against the satellite record. Keep this link to follow what happens to it:",
+    "sentBody": "It is checked automatically, usually within a minute, against your photo's location, the satellite record and other reports. Keep this link to follow what happens to it:",
     "sentCaseLink": "Follow your report",
     "another": "Send another report",
     "seeCases": "See reports from the public",
     "pinMap": "Map",
     "pinSatellite": "Satellite",
     "pinHint": "Click the map to drop the pin, or drag the pin to adjust it.",
-    "pinAria": "Map for choosing where you saw it"
+    "pinAria": "Map for choosing where you saw it",
+    "photoLocationUsed": "Using the location saved in your photo (±{accuracy} m).",
+    "photoLocationUsedNoAccuracy": "Using the location saved in your photo.",
+    "photoLocationDiffers": "Your photo saved its own location, {distance} from the one above.",
+    "usePhotoLocation": "Use the photo's location",
+    "photoNoLocation": "This photo has no saved location. For the quickest check, use Near me while you are at the place."
   },
   "cases": {
     "title": "Reports from the public",
@@ -324,13 +329,13 @@
       "not_visible_yet": "Not visible from space yet"
     },
     "verdictHelp": {
-      "under_review": "A moderator is still comparing this report with the satellite record.",
+      "under_review": "This report is still being compared with the satellite record.",
       "confirmed_by_satellite": "GhanaWatch's satellite analysis shows a matching change near this spot.",
       "not_visible_yet": "Nothing matching shows in the satellite record yet. It may be too small, too new or hidden by cloud."
     },
     "status": {
       "reported": "Reported",
-      "confirmed": "Confirmed by a moderator",
+      "confirmed": "Confirmed",
       "passed_to_authority": "Passed to {authority}",
       "action_seen": "Action seen",
       "closed": "Closed"
@@ -359,13 +364,17 @@
     "openGroundView": "See this spot in Ground view",
     "photoAlt": "Photo sent by a member of the public",
     "locationNote": "Location shown to about 100 m to protect the person who reported it.",
-    "pendingTitle": "This report is waiting for review",
-    "pendingBody": "A moderator checks every report against the satellite record before it is published. Come back to this link later.",
+    "pendingTitle": "This report is being checked",
+    "pendingBody": "Every report is checked automatically against the photo's own location, the satellite record and other people's reports, and published as soon as something confirms it. If nothing does yet, it is checked again with each new satellite pass for up to 30 days. Come back to this link later.",
     "rejectedTitle": "This report was not published",
-    "rejectedBody": "A moderator could not confirm it. Thank you for reporting; you can send another report at any time.",
+    "rejectedBody": "It did not pass the checks: for example, the photo was taken somewhere else or long ago, or it was already sent. Thank you for reporting; you can send another report at any time.",
     "needsInfoTitle": "This report needs more information",
     "needsInfoBody": "A moderator could not confirm it from the photo. If you can, send a new report with a clearer photo.",
-    "back": "All reports"
+    "back": "All reports",
+    "unverifiedTitle": "This report could not be confirmed",
+    "unverifiedBody": "For 30 days nothing confirmed it: the photo had no location of its own, no satellite saw a matching change and nobody else reported the same. It stays on record but is not published. If it is still happening, send a new report from the place using Near me.",
+    "checkedAuto": "Checked automatically",
+    "checkedModerator": "Checked by a moderator"
   },
   "land": {
     "title": "Check this land",

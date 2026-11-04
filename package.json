@@ -23,6 +23,7 @@
     "detector:cube": "tsx src/pipeline/ts/cube-cli.ts",
     "release": "tsx src/pipeline/release/run.ts",
     "alerts:weekly": "tsx src/pipeline/alerts/weekly.ts",
+    "reports:review": "tsx src/pipeline/review-reports.ts",
     "scheduler": "bash deploy/scheduler.sh"
   },
   "dependencies": {

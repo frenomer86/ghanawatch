@@ -36,6 +36,7 @@ function toCase(row: Row, timeline: CaseEvent[], exact: boolean): PublicCase {
     authority: (r.authority as Authority | null) ?? null,
     photoUrl: r.photoKey ? `/api/v1/cases/${r.id}/photo` : null,
     satelliteCheck: (r.satelliteCheck as unknown as SatelliteCheck | null) ?? null,
+    checkedBy: r.status !== "approved" ? null : !r.moderatorId && (r.autoReview as { decision?: string } | null)?.decision === "approve" ? "automatic" : "moderator",
     timeline,
   };
 }

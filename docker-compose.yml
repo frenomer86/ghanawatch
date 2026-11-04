@@ -4,7 +4,8 @@
 #   docker compose up -d --build                  # first start
 #   docker compose run --rm pipeline npm run setup   # migrations, boundaries, admin
 #
-# Services: db (PostGIS), web (Next.js), pipeline (live data every 3 hours), scheduler (monthly release, weekly digest), caddy (HTTPS).
+# Services: db (PostGIS), web (Next.js), pipeline (live data every 3 hours), scheduler (monthly release, weekly digest),
+# reviewer (automatic checking of citizen reports), caddy (HTTPS).
 name: ghanawatch
 
 services:
@@ -100,6 +101,28 @@ services:
       - uploads:/app/.data
       - releases:/app/public/releases
       - alerts:/app/public/alerts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  reviewer:
+    image: ghanawatch:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Checks every new citizen report within a minute, with no moderator: photo safety screen, faces blurred,
+    # published or rejected on the evidence, held ones re-checked as satellite passes arrive
+    # (src/lib/domain/auto-review.ts). Reads and rewrites photos on the uploads volume, where it also caches
+    # the photo safety model it downloads once (88.5 MB).
+    networks: [internal, edge]
+    env_file: .env.production
+    environment:
+      # Rows only, like the website.
+      DATABASE_URL: postgres://ghanawatch_app:${APP_DB_PASSWORD}@db:5432/ghanawatch
+      DB_POOL_MAX: "2"
+    command: ["npm", "run", "reports:review", "--", "--watch"]
+    volumes:
+      - uploads:/app/.data
     depends_on:
       db:
         condition: service_healthy

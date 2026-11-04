@@ -3,13 +3,14 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { setRequestLocale } from "next-intl/server";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { resolveLocale } from "@/i18n/locale";
 import { AppShell } from "@/components/layout/app-shell";
 import { currentUser } from "@/lib/server/auth";
 import { getDb } from "@/lib/db/client";
 import { changeEvents, communityReports, dataSources, newsSignals, pipelineRuns } from "@/lib/db/schema";
-import { ModerationQueue } from "@/components/admin/moderation-queue";
+import { AutoDecisions, ModerationQueue } from "@/components/admin/moderation-queue";
+import type { AutoReview } from "@/lib/domain/auto-review";
 import { SightingQueue } from "@/components/admin/sighting-queue";
 import { pendingSightings } from "@/lib/db/repo/sightings";
 import { openCases } from "@/lib/db/repo/cases";
@@ -84,6 +85,22 @@ async function AdminBody({ full }: { full: boolean }) {
     .orderBy(desc(pipelineRuns.startedAt))
     .limit(12);
   const pending = full ? await db.select().from(communityReports).where(eq(communityReports.status, "pending")).orderBy(desc(communityReports.createdAt)).limit(50) : [];
+  // What the report reviewer decided on its own in the last week, for a moderator to overturn if it erred.
+  const autoDecided = full
+    ? await db
+        .select()
+        .from(communityReports)
+        .where(
+          and(
+            isNotNull(communityReports.autoReview),
+            isNull(communityReports.moderatorId),
+            inArray(communityReports.status, ["approved", "rejected", "unverified"]),
+            sql`${communityReports.moderatedAt} >= now() - interval '7 days'`,
+          ),
+        )
+        .orderBy(desc(communityReports.moderatedAt))
+        .limit(30)
+    : [];
   const sightings = full ? await pendingSightings(50) : [];
   // Open cases carry the reporter's exact spot, and news signals are staff-only working material: like the
   // queues, they wait until the account has two-step sign-in on, so a stolen password alone shows no more
@@ -242,8 +259,11 @@ async function AdminBody({ full }: { full: boolean }) {
 
       <section aria-labelledby="h-queue" className="rounded-xl border bg-card p-5">
         <h2 id="h-queue" className="text-lg font-semibold">
-          Moderation queue ({pending.length})
+          Reports waiting for evidence ({pending.length})
         </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The report reviewer publishes or rejects each report on its own within a minute; these have nothing to confirm them yet and are checked again with each satellite pass for 30 days. You can decide any of them yourself.
+        </p>
         <ModerationQueue
           items={pending.map((p) => ({
             id: p.id,
@@ -255,6 +275,21 @@ async function AdminBody({ full }: { full: boolean }) {
             photoKey: p.photoKey,
             category: p.category,
             satelliteCheck: (p.satelliteCheck as unknown as SatelliteCheck | null) ?? null,
+            autoReview: (p.autoReview as unknown as AutoReview | null) ?? null,
+          }))}
+        />
+        <h3 className="mt-6 text-sm font-semibold">Decided automatically this week ({autoDecided.length})</h3>
+        <AutoDecisions
+          items={autoDecided.map((p) => ({
+            id: p.id,
+            status: p.status,
+            category: p.category,
+            description: p.description,
+            note: p.moderationNote,
+            moderatedAt: (p.moderatedAt ?? p.updatedAt).toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
+            photoKey: p.photoKey,
+            autoReview: (p.autoReview as unknown as AutoReview | null) ?? null,
           }))}
         />
       </section>

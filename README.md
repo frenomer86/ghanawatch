@@ -32,7 +32,7 @@ Sign in at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_INITIAL_PASSWORD`.
 - `/alerts` the weekly digest (email sign-up, WhatsApp channel, RSS and JSON feeds) and the reverse-chronological feed with type and region filters
 - `/event/{id}` stand-alone record with dates, confidence, source, citation and GeoJSON download
 - `/my-area` device-local watchlist of districts or points
-- `/report` moderated ground report (photo, location, text), queued offline
+- `/report` ground report (photo, location, text), queued offline, checked automatically against the photo's own GPS position and time, GhanaWatch's satellite, fire, flood and rain records and other people's reports, with faces blurred and contact details removed (`docs/report-automation.md`)
 - `/data` filter, preview and download CSV/GeoJSON; `/data/api`, `/data/sources`, `/data/methods` (index definition, versions, corrections log), `/data/accuracy` (every random-sample check)
 - `/how-it-works`, `/about`, `/admin`
 - `/api/v1/*` public read API (see `/data/api`)
@@ -49,6 +49,7 @@ Sign in at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_INITIAL_PASSWORD`.
 | `npm run index:close [-- --month=YYYY-MM] [--dry-run]` | Freeze the Galamsey Index for a month and every earlier month still open |
 | `npm run release [-- --month=YYYY-MM] [--dry-run] [--skip-sample] [--force]` | The monthly release: close the index, confirmation sample, data files, PDF, press release, cards, manifest, changelog, Zenodo |
 | `npm run alerts:weekly` | The weekly digest: record it, email subscribers, write the WhatsApp text to `public/alerts/latest.txt` |
+| `npm run reports:review [-- --watch]` | The report reviewer: photo screen, face blurring and the automatic publish, reject or hold decision for citizen reports (the `reviewer` service runs it with `--watch`) |
 | `npm run scheduler` | The loop that runs the release (first Monday, 06:00 GMT; dry run the Wednesday before) and the digest (Mondays, 07:00 GMT) |
 | `npm test` | Vitest unit tests (validation, geometry, export, pipeline) |
 | `npm run e2e` | Playwright end-to-end and axe accessibility checks (starts the dev server) |

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, CheckCircle2, LocateFixed, ShieldCheck } from "lucide-react";
+import { Camera, CheckCircle2, ImageIcon, LocateFixed, ShieldCheck } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GHANA_BBOX, REPORT_CATEGORIES, type ReportCategory } from "@/lib/domain/types";
+import { GHANA_BBOX, REPORT_CATEGORIES, type LocationSource, type ReportCategory } from "@/lib/domain/types";
+import { readPhotoMeta } from "@/lib/domain/exif";
+import { haversineKm } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import { PHOTO_MAX_BYTES, PHOTO_MIME } from "@/lib/domain/validation";
 import { enqueueReport, flushQueue } from "@/lib/client/report-queue";
@@ -38,6 +40,10 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [accuracy, setAccuracy] = useState<number | null>(null);
+  // Where the position came from, sent with the report for the automatic check.
+  const [locSource, setLocSource] = useState<LocationSource | null>(null);
+  const [photoLoc, setPhotoLoc] = useState<{ lat: number; lon: number; accuracyM: number | null } | null>(null);
+  const [photoNoLoc, setPhotoNoLoc] = useState(false);
   const [desc, setDesc] = useState("");
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [consent, setConsent] = useState(false);
@@ -59,11 +65,42 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
         setLat(p.coords.latitude.toFixed(5));
         setLon(p.coords.longitude.toFixed(5));
         setAccuracy(Math.round(p.coords.accuracy));
+        setLocSource("device");
       },
       (err) => toast.error(err.code === err.PERMISSION_DENIED ? tm("locationDenied") : tm("locationUnavailable")),
       { enableHighAccuracy: true, timeout: 15_000 },
     );
   };
+
+  const applyPhotoLocation = (loc: { lat: number; lon: number; accuracyM: number | null }) => {
+    setLat(loc.lat.toFixed(5));
+    setLon(loc.lon.toFixed(5));
+    setAccuracy(loc.accuracyM);
+    setLocSource("photo");
+  };
+
+  /** Read the location the camera saved in the photo (never uploaded separately; the server reads it too). */
+  const onPhoto = async (file: File | undefined) => {
+    setPhotoLoc(null);
+    setPhotoNoLoc(false);
+    if (!file || file.size > PHOTO_MAX_BYTES) return;
+    const m = readPhotoMeta(await file.arrayBuffer());
+    const inGhana = m.lat != null && m.lon != null && m.lat >= GHANA_BBOX[1] && m.lat <= GHANA_BBOX[3] && m.lon >= GHANA_BBOX[0] && m.lon <= GHANA_BBOX[2];
+    if (!inGhana) {
+      setPhotoNoLoc(true);
+      return;
+    }
+    const loc = { lat: m.lat!, lon: m.lon!, accuracyM: m.accuracyM };
+    setPhotoLoc(loc);
+    // With no position yet, or one from a pin, the photo's own position is the better one.
+    if (!lat || !lon || locSource !== "device") applyPhotoLocation(loc);
+  };
+
+  const photoDistance =
+    photoLoc && lat && lon && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon))
+      ? Math.round(haversineKm({ lat: Number(lat), lon: Number(lon) }, photoLoc) * 1000)
+      : null;
+  const fmtDistance = (m: number) => (m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`);
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {};
@@ -99,6 +136,7 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
     if (accuracy != null) fd.set("accuracyM", String(accuracy));
     fd.set("description", desc.trim());
     fd.set("category", category!);
+    fd.set("locationSource", locSource ?? "pin");
     try {
       const res = await fetch("/api/v1/reports", { method: "POST", body: fd });
       if (res.ok) {
@@ -113,7 +151,7 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
       setStatus("error");
       toast.error(body.message ?? t("failed"));
     } catch {
-      await enqueueReport({ photo: fileRef.current!.files![0], lat, lon, accuracyM: accuracy, description: desc.trim(), category: category! });
+      await enqueueReport({ photo: fileRef.current!.files![0], lat, lon, accuracyM: accuracy, description: desc.trim(), category: category!, locationSource: locSource ?? "pin" });
       setStatus("queued");
       toast(t("queued"));
       reset();
@@ -124,6 +162,8 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
     setDesc("");
     setCategory(null);
     setConsent(false);
+    setPhotoLoc(null);
+    setPhotoNoLoc(false);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -206,6 +246,7 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
           type="file"
           accept="image/jpeg,image/png,image/webp"
           capture="environment"
+          onChange={(e) => void onPhoto(e.target.files?.[0])}
           aria-describedby={`${id}-photo-help${errors.photo ? ` ${id}-photo-err` : ""}`}
           aria-invalid={Boolean(errors.photo)}
           className="h-11 file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium"
@@ -213,6 +254,7 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
         <p id={`${id}-photo-help`} className="text-xs text-muted-foreground">
           {t("photoHelp")}
         </p>
+        {photoNoLoc && <p className="text-xs text-muted-foreground">{t("photoNoLocation")}</p>}
         {errors.photo && (
           <p id={`${id}-photo-err`} className="text-sm text-sev-urgent">
             {errors.photo}
@@ -227,13 +269,33 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
             <Label htmlFor={`${id}-lat`} className="text-xs text-muted-foreground">
               Latitude
             </Label>
-            <Input id={`${id}-lat`} inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} aria-invalid={Boolean(errors.location)} className="h-11" />
+            <Input
+              id={`${id}-lat`}
+              inputMode="decimal"
+              value={lat}
+              onChange={(e) => {
+                setLat(e.target.value);
+                setLocSource("pin");
+              }}
+              aria-invalid={Boolean(errors.location)}
+              className="h-11"
+            />
           </div>
           <div className="flex-1">
             <Label htmlFor={`${id}-lon`} className="text-xs text-muted-foreground">
               Longitude
             </Label>
-            <Input id={`${id}-lon`} inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} aria-invalid={Boolean(errors.location)} className="h-11" />
+            <Input
+              id={`${id}-lon`}
+              inputMode="decimal"
+              value={lon}
+              onChange={(e) => {
+                setLon(e.target.value);
+                setLocSource("pin");
+              }}
+              aria-invalid={Boolean(errors.location)}
+              className="h-11"
+            />
           </div>
           <div className="flex items-end">
             <Button type="button" variant="outline" onClick={locate} className="h-11 w-full sm:w-auto">
@@ -248,14 +310,29 @@ export function ReportForm({ styleUrl }: { styleUrl: string }) {
             setLat(p.lat.toFixed(5));
             setLon(p.lon.toFixed(5));
             setAccuracy(null);
+            setLocSource("pin");
           }}
           styleUrl={styleUrl}
           labels={{ map: t("pinMap"), satellite: t("pinSatellite"), hint: t("pinHint"), ariaLabel: t("pinAria") }}
         />
         <p className="text-xs text-muted-foreground">
           {t("locationHelp")}
-          {accuracy != null ? ` (±${accuracy} m)` : ""}
+          {accuracy != null && locSource !== "photo" ? ` (±${accuracy} m)` : ""}
         </p>
+        {photoLoc && locSource === "photo" && (
+          <p className="flex items-center gap-1.5 text-xs text-primary">
+            <ImageIcon className="size-3.5" aria-hidden />
+            {photoLoc.accuracyM != null ? t("photoLocationUsed", { accuracy: photoLoc.accuracyM }) : t("photoLocationUsedNoAccuracy")}
+          </p>
+        )}
+        {photoLoc && locSource !== "photo" && photoDistance != null && photoDistance > 100 && (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {t("photoLocationDiffers", { distance: fmtDistance(photoDistance) })}
+            <Button type="button" variant="outline" size="sm" onClick={() => applyPhotoLocation(photoLoc)}>
+              {t("usePhotoLocation")}
+            </Button>
+          </p>
+        )}
         {errors.location && (
           <p id={`${id}-location`} className="text-sm text-sev-urgent">
             {errors.location}

@@ -3,7 +3,8 @@
 /**
  * Offline queue for community reports, in IndexedDB (photos are Blobs, which
  * localStorage cannot hold). flushQueue() posts anything pending; it is called
- * on load and on the `online` event.
+ * on load and on the `online` event. The original photo file is kept as it is,
+ * so the server can still read the location the camera saved in it.
  */
 const DB = "gw-reports";
 const STORE = "queue";
@@ -17,6 +18,8 @@ interface QueuedReport {
   description: string;
   /** Missing on reports queued before categories existed. */
   category?: string;
+  /** Where the position came from (missing on reports queued before the automatic check). */
+  locationSource?: string;
   queuedAt: string;
 }
 
@@ -56,6 +59,9 @@ export async function flushQueue(): Promise<number> {
     if (item.accuracyM != null) fd.set("accuracyM", String(item.accuracyM));
     fd.set("description", item.description);
     if (item.category) fd.set("category", item.category);
+    if (item.locationSource) fd.set("locationSource", item.locationSource);
+    // When the report was made, so the photo's age is measured from then, not from when the phone got signal.
+    fd.set("observedAt", item.queuedAt);
     try {
       const res = await fetch("/api/v1/reports", { method: "POST", body: fd });
       // 4xx means the report itself is invalid; drop it rather than retry forever.

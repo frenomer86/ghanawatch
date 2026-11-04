@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { ArrowLeft, Clock, MapPin, Rotate3d, Satellite } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Rotate3d, Satellite, ShieldCheck } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { uuidParam } from "@/lib/domain/validation";
@@ -67,7 +67,7 @@ async function CaseBody({ params, locale }: { params: PageProps<"/[locale]/repor
   );
 
   if (!("category" in c)) {
-    const key = c.status === "rejected" ? "rejected" : c.status === "needs_info" ? "needsInfo" : "pending";
+    const key = c.status === "rejected" ? "rejected" : c.status === "needs_info" ? "needsInfo" : c.status === "unverified" ? "unverified" : "pending";
     return (
       <div className="mx-auto max-w-2xl">
         {back}
@@ -94,6 +94,12 @@ async function CaseBody({ params, locale }: { params: PageProps<"/[locale]/repor
           <header>
             <div className="flex flex-wrap items-center gap-2">
               <VerdictBadge verdict={c.satelliteVerdict} />
+              {c.checkedBy && (
+                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                  <ShieldCheck className="size-3.5" aria-hidden />
+                  {t(c.checkedBy === "automatic" ? "checkedAuto" : "checkedModerator")}
+                </span>
+              )}
               <span className="text-sm text-muted-foreground">{t("reportedOn", { date: day(c.createdAt) })}</span>
             </div>
             <h1 className="mt-2 text-2xl font-semibold leading-tight">

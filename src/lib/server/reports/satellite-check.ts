@@ -10,7 +10,9 @@ import { highResCaptures } from "@/lib/server/explore/wayback";
  * Automatic comparison of a citizen report with what GhanaWatch's satellite
  * analysis has found at the same place: detections of a matching kind within
  * 750 m in the past year, and the newest high-resolution close-up of the spot.
- * The result is a suggestion for the moderator, who sets the public verdict.
+ * The report reviewer (src/lib/server/reports/auto-review.ts) uses it as
+ * evidence and sets the public verdict; a moderator deciding a report sees it
+ * as a suggestion.
  */
 export type { SatelliteCheck };
 
@@ -29,7 +31,8 @@ export function suggestVerdict(detectionCount: number): SatelliteCheck["suggesti
   return detectionCount > 0 ? "confirmed_by_satellite" : "not_visible_yet";
 }
 
-export async function satelliteCheck(lon: number, lat: number, category: ReportCategory, now = new Date()): Promise<SatelliteCheck> {
+/** `closeUp: false` skips the Esri close-up lookup (the report reviewer's repeat checks keep the first one). */
+export async function satelliteCheck(lon: number, lat: number, category: ReportCategory, now = new Date(), opts: { closeUp?: boolean } = {}): Promise<SatelliteCheck> {
   const db = await getDb();
   const d = 0.008; // about 890 m
   const since = new Date(now.getTime() - 365 * 86_400_000).toISOString().slice(0, 10);
@@ -95,11 +98,13 @@ export async function satelliteCheck(lon: number, lat: number, category: ReportC
     .slice(0, 5);
 
   let closeUp: SatelliteCheck["closeUp"] = null;
-  try {
-    const newest = (await highResCaptures(lon, lat))[0];
-    if (newest) closeUp = { capturedOn: newest.capturedOn, sensor: newest.sensor, resolutionM: newest.resolutionM, release: newest.release };
-  } catch {
-    // The close-up date is context, not evidence; leave it out if Esri does not answer.
+  if (opts.closeUp !== false) {
+    try {
+      const newest = (await highResCaptures(lon, lat))[0];
+      if (newest) closeUp = { capturedOn: newest.capturedOn, sensor: newest.sensor, resolutionM: newest.resolutionM, release: newest.release };
+    } catch {
+      // The close-up date is context, not evidence; leave it out if Esri does not answer.
+    }
   }
 
   return { checkedAt: now.toISOString(), radiusM: CHECK_RADIUS_M, suggestion: suggestVerdict(detections.length), detections, closeUp };

@@ -441,10 +441,19 @@ export const communityReports = pgTable(
     satelliteVerdict: text("satellite_verdict").notNull().default("under_review"),
     caseStatus: text("case_status").notNull().default("reported"),
     authority: text("authority"),
+    /** Where the reported position came from: the photo's own GPS, the phone's location, or a pin on the map. */
+    locationSource: text("location_source"),
+    /** When the reporter made the report (it can wait offline on the phone); null means when it arrived. */
+    observedAt: timestamp("observed_at", { withTimezone: true }),
+    /** GPS position, accuracy and time read from the original photo before its metadata was removed. Never public. */
+    photoMeta: jsonb("photo_meta").$type<Record<string, unknown>>(),
+    /** The automatic verification (src/lib/domain/auto-review.ts): decision, reasons, evidence, next check. */
+    autoReview: jsonb("auto_review").$type<Record<string, unknown>>(),
     ...timestamps,
   },
   (t) => [
     index("community_reports_status_created_idx").on(t.status, t.createdAt),
+    check("community_reports_location_source_ck", sql`location_source is null or location_source in ('photo', 'device', 'pin')`),
     index("community_reports_latlon_idx").on(t.lat, t.lon),
     check("community_reports_status_ck", inList("status", REPORT_STATUSES)),
     check("community_reports_category_ck", inList("category", REPORT_CATEGORIES)),

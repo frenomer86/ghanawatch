@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SatelliteCheck } from "@/lib/domain/cases";
+import { evidenceLine, type AutoReview } from "@/lib/domain/auto-review";
 import { SATELLITE_VERDICTS, type SatelliteVerdict } from "@/lib/domain/types";
 import { groundViewHref } from "@/lib/explore/imagery";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,41 @@ interface Item {
   photoKey: string | null;
   category: string;
   satelliteCheck: SatelliteCheck | null;
+  autoReview: AutoReview | null;
+}
+
+const REASON: Record<string, string> = {
+  awaiting_evidence: "waiting for evidence",
+  safety_unchecked: "photo safety screen not run yet",
+  possibly_unsafe_photo: "photo safety score is borderline; decide it yourself",
+  photo_matches: "photo's own GPS matches",
+  corroborated: "sensor or community evidence",
+  on_site: "sent on site with a fresh photo",
+  unsafe_photo: "photo failed the safety screen",
+  duplicate: "same photo already sent here",
+  photo_reused: "same photo used for another place",
+  photo_outside_ghana: "photo GPS outside Ghana",
+  photo_far: "photo GPS more than 50 km away",
+  photo_old: "photo more than a year old",
+  no_evidence: "nothing confirmed it in 30 days",
+};
+
+/** One line on what the automatic check found, for the moderator. */
+function AutoLine({ review }: { review: AutoReview | null }) {
+  if (!review) return <p>Automatic check: not run yet (the reviewer looks every minute).</p>;
+  const facts = [
+    review.photoDistanceM != null ? `photo GPS ${review.photoDistanceM} m away` : "no GPS in photo",
+    review.photoAgeDays != null ? `taken ${review.photoAgeDays} days before` : null,
+    review.safety?.nsfw != null ? `safety score ${review.safety.nsfw}` : null,
+    review.safety?.faces ? `${review.safety.faces} face(s) blurred` : null,
+  ].filter(Boolean);
+  return (
+    <p>
+      Automatic check: {review.reasons.map((r) => REASON[r] ?? r).join(", ")} · {facts.join(" · ")}
+      {review.nextCheckAt ? ` · next check ${review.nextCheckAt.slice(0, 16).replace("T", " ")}` : ""}
+      {review.evidence.length > 0 && ` · ${review.evidence.map(evidenceLine).join("; ")}`}
+    </p>
+  );
 }
 
 const CATEGORY: Record<string, string> = { galamsey: "Galamsey", dumping: "Rubbish dumping", fire: "Fire or burning", flooding: "Flooding", other: "Something else" };
@@ -105,6 +141,7 @@ export function ModerationQueue({ items }: { items: Item[] }) {
               ) : (
                 <p>Satellite check still running; reload in a moment.</p>
               )}
+              <AutoLine review={item.autoReview} />
               <a href={groundViewHref(item.lat, item.lon, check?.detections[0]?.id)} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-link underline">
                 Look at the spot in Ground view
               </a>
@@ -152,6 +189,66 @@ export function ModerationQueue({ items }: { items: Item[] }) {
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+interface AutoItem {
+  id: string;
+  status: string;
+  category: string;
+  description: string;
+  note: string | null;
+  moderatedAt: string;
+  updatedAt: string;
+  photoKey: string | null;
+  autoReview: AutoReview | null;
+}
+
+/** The reviewer's recent decisions, each with the one action that overturns it. */
+export function AutoDecisions({ items }: { items: AutoItem[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const overturn = async (item: AutoItem) => {
+    const status = item.status === "approved" ? "rejected" : "approved";
+    setBusy(item.id);
+    try {
+      const res = await fetch(`/api/v1/admin/reports/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status, note: `Overturned the automatic decision (${item.status}).`, expectedUpdatedAt: item.updatedAt }),
+      });
+      const body = (await res.json()) as { message?: string };
+      if (!res.ok) return void toast.error(body.message ?? "Decision failed");
+      toast.success(status === "approved" ? "Report published" : "Report withdrawn");
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  };
+  if (items.length === 0) return <p className="mt-2 text-sm text-muted-foreground">Nothing decided automatically in the last seven days.</p>;
+  return (
+    <ul className="mt-2 divide-y text-sm">
+      {items.map((item) => (
+        <li key={item.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
+          <div className="min-w-0 flex-1">
+            <p>
+              <span className={cn("font-medium", item.status === "approved" ? "text-primary" : "text-sev-urgent")}>{item.status === "approved" ? "Published" : item.status === "rejected" ? "Rejected" : "Closed unverified"}</span> · {CATEGORY[item.category] ?? item.category} ·{" "}
+              {item.moderatedAt.slice(0, 16).replace("T", " ")} ·{" "}
+              <a href={`/reports/${item.id}`} target="_blank" rel="noopener noreferrer" className="text-link underline">
+                case
+              </a>
+            </p>
+            <p className="truncate text-muted-foreground">{item.description}</p>
+            <p className="text-xs text-muted-foreground">{item.note}</p>
+          </div>
+          {item.photoKey || item.status === "approved" ? (
+            <Button size="sm" variant={item.status === "approved" ? "destructive" : "outline"} disabled={busy === item.id} onClick={() => overturn(item)}>
+              {item.status === "approved" ? "Withdraw" : "Publish anyway"}
+            </Button>
+          ) : null}
+        </li>
+      ))}
     </ul>
   );
 }

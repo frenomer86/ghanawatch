@@ -5,6 +5,7 @@ import {
   CONFIDENCES,
   GHANA_BBOX,
   LOCALES,
+  LOCATION_SOURCES,
   REPORT_CATEGORIES,
   SATELLITE_VERDICTS,
   SEVERITIES,
@@ -198,6 +199,10 @@ export const reportBody = z
     description: z.string().trim().min(1).max(500),
     category: z.enum(REPORT_CATEGORIES).default("other"),
     changeEventId: uuidParam.optional(),
+    /** Where the position came from (the form says; the server also checks the photo). */
+    locationSource: z.enum(LOCATION_SOURCES).optional(),
+    /** When the report was made, for one that waited offline on the phone. */
+    observedAt: z.string().datetime({ offset: true }).optional(),
   })
   .strict();
 export type ReportBody = z.infer<typeof reportBody>;

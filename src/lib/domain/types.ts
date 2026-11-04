@@ -22,7 +22,12 @@ export type Confidence = (typeof CONFIDENCES)[number];
 export const EVENT_STATUSES = ["new", "reviewed", "dismissed", "verified"] as const;
 export type EventStatus = (typeof EVENT_STATUSES)[number];
 
-export const REPORT_STATUSES = ["pending", "approved", "rejected", "needs_info"] as const;
+/** Where a report's position came from: the photo's own GPS, the phone's location, or a pin on the map. */
+export const LOCATION_SOURCES = ["photo", "device", "pin"] as const;
+export type LocationSource = (typeof LOCATION_SOURCES)[number];
+
+/** "unverified": closed automatically after 30 days with nothing to confirm it (src/lib/domain/auto-review.ts). */
+export const REPORT_STATUSES = ["pending", "approved", "rejected", "needs_info", "unverified"] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 /** What a member of the public is reporting. */

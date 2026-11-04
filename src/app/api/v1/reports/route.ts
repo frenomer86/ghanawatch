@@ -8,6 +8,9 @@ import { putObject } from "@/lib/server/storage";
 import { districtContaining } from "@/lib/db/repo/boundaries";
 import { addCaseEvent, saveSatelliteCheck } from "@/lib/db/repo/cases";
 import { satelliteCheck } from "@/lib/server/reports/satellite-check";
+import { readPhotoMeta } from "@/lib/domain/exif";
+import { redactContacts } from "@/lib/domain/redact";
+import { haversineKm } from "@/lib/geo";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { assertSameOrigin, clientIpHash, enforceRateLimit, handle, HttpError, json, readBody } from "@/lib/server/http";
 
@@ -16,11 +19,15 @@ import { assertSameOrigin, clientIpHash, enforceRateLimit, handle, HttpError, js
  * photo (jpeg|png|webp ≤ 5 MB), lat, lon, accuracyM?, description (≤ 500), category?, changeEventId?
  *
  * Anonymous: no name or account is asked for. The photo is sniffed by magic
- * bytes, re-encoded with sharp (which drops EXIF, including the photographer's
- * GPS track), downscaled to 2048 px and stored under a random key. Reports
- * enter the moderation queue as "pending" and start their public case trail
- * as "reported". Once the response is sent, the report is compared with
- * GhanaWatch's satellite detections at the same place for the moderator.
+ * bytes; the GPS position, accuracy and time the camera wrote are read from the
+ * original (kept privately, as evidence for the automatic check), and the photo
+ * is then re-encoded with sharp (which drops all of its metadata), downscaled to
+ * 2048 px and stored under a random key. Phone numbers, e-mail addresses and
+ * links are taken out of the description. Reports start as "pending" with the
+ * public case trail at "reported"; the report reviewer (src/pipeline/
+ * review-reports.ts) screens the photo, blurs faces and publishes or rejects
+ * the report on the evidence, usually within a minute. The satellite comparison
+ * starts as soon as the response is sent.
  */
 export const POST = handle(async (req: NextRequest) => {
   assertSameOrigin(req);
@@ -43,6 +50,8 @@ export const POST = handle(async (req: NextRequest) => {
     description: form.get("description"),
     category: form.get("category") ?? undefined,
     changeEventId: form.get("changeEventId") ?? undefined,
+    locationSource: form.get("locationSource") ?? undefined,
+    observedAt: form.get("observedAt") ?? undefined,
   });
   if (!fields.success) throw new HttpError(400, "Invalid report", fields.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
 
@@ -67,6 +76,18 @@ export const POST = handle(async (req: NextRequest) => {
     if (!ev) throw new HttpError(400, "Invalid report", [{ path: "changeEventId", message: "No such detection" }]);
   }
 
+  // The camera's own record of where and when, read before re-encoding removes it.
+  const meta = readPhotoMeta(bytes);
+  const photoMeta = meta.lat != null || meta.takenAt ? { lat: meta.lat, lon: meta.lon, accuracyM: meta.accuracyM, takenAt: meta.takenAt } : null;
+  const photoAt =
+    meta.lat != null && meta.lon != null ? haversineKm({ lon: fields.data.lon, lat: fields.data.lat }, { lon: meta.lon, lat: meta.lat }) * 1000 : Infinity;
+  const locationSource = photoAt <= 30 ? "photo" : (fields.data.locationSource ?? "pin");
+  // A report that waited offline keeps the time it was made, within the last 30 days and not in the future.
+  const now = Date.now();
+  const observed = fields.data.observedAt ? Date.parse(fields.data.observedAt) : NaN;
+  const observedAt = Number.isFinite(observed) && observed <= now + 5 * 60_000 && observed >= now - 30 * 86_400_000 ? new Date(Math.min(observed, now)) : null;
+  const description = redactContacts(fields.data.description).text.slice(0, 500);
+
   const sharp = (await import("sharp")).default;
   const processed = await sharp(bytes, { failOn: "error", limitInputPixels: 50_000_000 })
     .rotate()
@@ -84,8 +105,11 @@ export const POST = handle(async (req: NextRequest) => {
     lat: fields.data.lat,
     lon: fields.data.lon,
     accuracyM: fields.data.accuracyM ?? null,
-    description: fields.data.description,
+    description,
     category: fields.data.category,
+    locationSource,
+    observedAt,
+    photoMeta,
     photoKey: key,
     photoSha256: sha256,
     changeEventId: fields.data.changeEventId ?? null,
