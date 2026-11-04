@@ -30,7 +30,8 @@
     "reports": "Monthly reports",
     "air": "Air and heat",
     "reservoirs": "Reservoirs and lakes",
-    "coast": "Coastline"
+    "coast": "Coastline",
+    "landWater": "Land and water"
   },
   "home": {
     "title": "Ghana's monthly satellite report on its land and rivers",

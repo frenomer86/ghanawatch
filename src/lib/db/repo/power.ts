@@ -33,6 +33,7 @@ export async function powerPoints(hours: number): Promise<PowerPoint[]> {
 }
 
 export interface DistrictPower {
+  districtId: string;
   district: string;
   region: string | null;
   status: "off" | "on";
@@ -73,6 +74,7 @@ export async function districtPower(): Promise<DistrictPower[]> {
     const lastT = new Date(last.at).getTime();
     const today = list.filter((r) => now - new Date(r.at).getTime() < 24 * 3_600_000);
     out.push({
+      districtId: last.district_id,
       district: last.district,
       region: last.region,
       status: last.kind === "off" && now - lastT < OPEN_CAP_H * 3_600_000 ? "off" : "on",

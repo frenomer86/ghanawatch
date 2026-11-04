@@ -9,6 +9,9 @@ import { Link } from "@/i18n/navigation";
 import { districtBySlug } from "@/lib/db/repo/scorecards";
 import { districtRainOutlook, RAIN_LEVELS } from "@/lib/db/repo/floods";
 import { districtAirHeat } from "@/lib/db/repo/air-heat";
+import { reservoirsInDistrict } from "@/lib/db/repo/reservoirs";
+import { districtCoast } from "@/lib/db/repo/coast";
+import { districtPower } from "@/lib/db/repo/power";
 import { AQI_TEXT, HEAT_TEXT } from "@/lib/domain/air-heat";
 import { shareOfArea } from "@/lib/domain/scorecards";
 import { districtSeries, latestClosedMonth, releaseFor } from "@/lib/server/index/read";
@@ -72,7 +75,17 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
   const d = await districtBySlug(slug);
   if (!d) notFound();
   const c = d.card;
-  const [rain, series, intakes, airHeat] = await Promise.all([districtRainOutlook(c.id), districtSeries(c.id), listIntakes(), districtAirHeat(c.id)]);
+  const [rain, series, intakes, airHeat, waters, coast, power] = await Promise.all([
+    districtRainOutlook(c.id),
+    districtSeries(c.id),
+    listIntakes(),
+    districtAirHeat(c.id),
+    reservoirsInDistrict(c.id).catch(() => []),
+    districtCoast(c.id).catch(() => null),
+    districtPower()
+      .then((all) => all.find((p) => p.districtId === c.id) ?? null)
+      .catch(() => null),
+  ]);
   const airToday = airHeat?.days[0] ?? null;
   const worstAirDay = airHeat?.days.reduce<(typeof airHeat.days)[number] | null>((w, d) => (d.aqi != null && (w?.aqi == null || d.aqi > w.aqi) ? d : w), null) ?? null;
   const latestMonth = series.at(-1) ?? null;
@@ -174,8 +187,46 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
           value={airToday?.feelsLikeMaxC != null ? `${Math.round(airToday.feelsLikeMaxC)} °C` : "–"}
           sub={airToday?.heatLevel ? `feels like at the hottest hour; ${HEAT_TEXT[airToday.heatLevel].label.toLowerCase()}` : "forecast not loaded yet"}
         />
+        {waters.map((w) => (
+          <Stat
+            key={w.slug}
+            tone={w.summary.trend === "falling" ? "alert" : undefined}
+            label={w.name}
+            value={w.summary.latest ? `${Math.round(w.summary.latest.waterPct)}% under water` : "–"}
+            sub={
+              w.summary.latest
+                ? w.summary.changeMonth == null || w.summary.trend === "steady"
+                  ? "steady over the last month, from radar"
+                  : `${w.summary.trend === "rising" ? "up" : "down"} ${Math.abs(w.summary.changeMonth)} points in a month, from radar`
+                : "not measured yet"
+            }
+          />
+        ))}
+        {coast && (
+          <Stat
+            tone={coast.worstRate != null && coast.worstRate <= -2 ? "alert" : undefined}
+            label="Coast retreating"
+            value={`${coast.retreatingKm} of ${coast.km} km`}
+            sub={coast.worstRate != null ? `fastest ${Math.abs(coast.worstRate).toFixed(1)} m a year${coast.worstPlace ? ` near ${coast.worstPlace}` : ""}, since 2000` : "no clear retreat since 2000"}
+          />
+        )}
+        {power && (
+          <Stat
+            tone={power.status === "off" ? "alert" : undefined}
+            label="Power cuts this week"
+            value={`${power.hoursOffWeek} h`}
+            sub={`${power.status === "off" ? "lights reported off now" : "lights reported on"}; from people's reports`}
+          />
+        )}
         <Stat label="Reports from the public" value={String(c.reports)} sub={c.reports ? `${c.reportsConfirmed} confirmed by satellite` : "none approved yet"} />
       </dl>
+      <p className="mt-3 text-sm text-muted-foreground">
+        More on <Link href="/land-and-water" className="text-link underline">land and water</Link> across Ghana. Lights off where you are?{" "}
+        <Link href="/power" className="text-link underline">
+          Report a power cut
+        </Link>
+        .
+      </p>
       {(c.clearedHa > 0 || c.possibleHa > 0 || c.inMinesHa > 0) && (
         <p className="mt-3 text-sm text-muted-foreground">
           Not counted as likely mining:

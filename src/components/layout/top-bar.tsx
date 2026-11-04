@@ -14,15 +14,10 @@ export const GROUPS = [
   {
     key: "groupWatch",
     items: [
-      { href: "/districts", key: "districts" },
-      { href: "/rivers", key: "rivers" },
       { href: "/monthly", key: "reports" },
+      { href: "/districts", key: "districts" },
       { href: "/alerts", key: "alerts" },
-      { href: "/floods", key: "floods" },
-      { href: "/air", key: "air" },
-      { href: "/reservoirs", key: "reservoirs" },
-      { href: "/coast", key: "coast" },
-      { href: "/power", key: "power" },
+      { href: "/land-and-water", key: "landWater" },
     ],
   },
   {
@@ -89,8 +84,12 @@ function LazyMenu({ render, placeholder }: { render: (m: Menus) => ComponentType
   });
 }
 
+/** The sections the Land and water page leads to; the menu shows Land and water as current on each of them. */
+export const LAND_AND_WATER_SECTIONS = ["/rivers", "/floods", "/reservoirs", "/coast", "/air"] as const;
+
 export function isActive(pathname: string, href: string) {
   if (href === "/data") return pathname === "/data" || (pathname.startsWith("/data/") && !pathname.startsWith("/data/sources"));
+  if (href === "/land-and-water" && LAND_AND_WATER_SECTIONS.some((s) => pathname === s || pathname.startsWith(`${s}/`))) return true;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { slugify } from "@/lib/domain/scorecards";
-import type { CoastPoint } from "@/lib/domain/coast";
+import { isSignificant, type CoastPoint } from "@/lib/domain/coast";
 import { getDb, rows as toRows } from "../client";
 
 export interface CoastPointRow extends CoastPoint {
@@ -41,4 +41,16 @@ export async function coastPointsAll(): Promise<CoastPointRow[]> {
     district: r.district,
     districtSlug: r.district ? slugify(r.district) : null,
   }));
+}
+
+/** A district's stretch of coast: kilometres measured, how many are retreating, and the fastest retreat. */
+export async function districtCoast(districtId: string): Promise<{ km: number; retreatingKm: number; worstRate: number | null; worstPlace: string | null } | null> {
+  const db = await getDb();
+  const rs = toRows<{ rate_m_yr: number; sig: number | null; certainty: string; place: string | null }>(
+    await db.execute(sql`select rate_m_yr, sig, certainty, place from coast_points where district_id = ${districtId}`),
+  );
+  if (!rs.length) return null;
+  const pts = rs.map((r) => ({ rateMYr: Number(r.rate_m_yr), sig: r.sig == null ? null : Number(r.sig), certainty: r.certainty, place: r.place }));
+  const retreating = pts.filter((p) => isSignificant(p) && p.rateMYr < 0).sort((a, b) => a.rateMYr - b.rateMYr);
+  return { km: pts.length, retreatingKm: retreating.length, worstRate: retreating[0]?.rateMYr ?? null, worstPlace: retreating[0]?.place ?? null };
 }

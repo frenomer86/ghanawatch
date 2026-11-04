@@ -1,4 +1,7 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import type { MultiPolygon, Polygon } from "geojson";
+import { pointInPolygon } from "@/lib/geo";
+import { adminBoundaries, reservoirs } from "../schema";
 import { RESERVOIRS, summarise, type ReservoirDef, type ReservoirObservation, type ReservoirSummary } from "@/lib/domain/reservoirs";
 import { getDb, rows as toRows } from "../client";
 
@@ -36,4 +39,37 @@ export async function reservoirCards(): Promise<ReservoirCard[]> {
     const area = areas.find((a) => a.slug === def.slug)?.area_km2;
     return { ...def, areaKm2: area == null ? null : Number(area), series, summary: summarise(series) };
   });
+}
+
+/**
+ * The watched water bodies that reach into a district: their bounding boxes overlap and at least one of up to
+ * 300 points along the outline lies inside the district's boundary (Lake Volta touches many districts).
+ */
+export async function reservoirsInDistrict(districtId: string): Promise<ReservoirCard[]> {
+  const db = await getDb();
+  const [d] = await db
+    .select({ geom: adminBoundaries.geom, minLon: adminBoundaries.bboxMinLon, minLat: adminBoundaries.bboxMinLat, maxLon: adminBoundaries.bboxMaxLon, maxLat: adminBoundaries.bboxMaxLat })
+    .from(adminBoundaries)
+    .where(eq(adminBoundaries.id, districtId))
+    .limit(1);
+  const g = d?.geom as Polygon | MultiPolygon | null | undefined;
+  if (!d || !g || (g.type !== "Polygon" && g.type !== "MultiPolygon") || d.minLon == null || d.minLat == null || d.maxLon == null || d.maxLat == null) return [];
+  const outlines = await db.select({ slug: reservoirs.slug, geom: reservoirs.geom, bbox: reservoirs.bbox }).from(reservoirs);
+  const touching = new Set<string>();
+  for (const o of outlines) {
+    const [w, s, e, n] = o.bbox;
+    if (e < d.minLon || w > d.maxLon || n < d.minLat || s > d.maxLat) continue;
+    const pts = o.geom.coordinates.flatMap((p) => p[0] ?? []);
+    const step = Math.max(1, Math.floor(pts.length / 300));
+    for (let i = 0; i < pts.length; i += step) {
+      const [lon, lat] = pts[i];
+      if (lon < d.minLon || lon > d.maxLon || lat < d.minLat || lat > d.maxLat) continue;
+      if (pointInPolygon([lon, lat], g)) {
+        touching.add(o.slug);
+        break;
+      }
+    }
+  }
+  if (!touching.size) return [];
+  return (await reservoirCards()).filter((c) => touching.has(c.slug));
 }
