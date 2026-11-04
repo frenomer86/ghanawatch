@@ -35,7 +35,7 @@ export async function depositOnZenodo(opts: { dir: string; files: string[]; titl
       title: opts.title,
       upload_type: "dataset",
       description: opts.description,
-      creators: [{ name: "GhanaWatch, KNUST" }],
+      creators: [{ name: "GhanaWatch" }],
       keywords: ["galamsey", "Ghana", "Sentinel-2", "illegal mining", "satellite monitoring"],
       license: "cc-by-4.0",
       version: `${opts.month}+index${opts.version}`,

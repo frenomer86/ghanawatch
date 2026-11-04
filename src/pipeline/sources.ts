@@ -34,7 +34,7 @@ export const SOURCE_REGISTRY: SourceDef[] = [
   {
     slug: "gw-multisensor",
     name: "GhanaWatch monthly galamsey record",
-    provider: "GhanaWatch (KNUST), from Copernicus Sentinel-2 and Sentinel-1, USGS Landsat 8 and 9, and the Copernicus DEM",
+    provider: "GhanaWatch, from Copernicus Sentinel-2 and Sentinel-1, USGS Landsat 8 and 9, and the Copernicus DEM",
     url: "https://element84.com/earth-search/",
     docUrl: "https://huggingface.co/datasets/ellaampy/SmallMinesDS",
     category: "imagery",
@@ -168,7 +168,7 @@ export const SOURCE_REGISTRY: SourceDef[] = [
   {
     slug: "s1-flood",
     name: "Flooding seen by radar",
-    provider: "GhanaWatch (KNUST), from Copernicus Sentinel-1 radar terrain-corrected by Microsoft Planetary Computer",
+    provider: "GhanaWatch, from Copernicus Sentinel-1 radar terrain-corrected by Microsoft Planetary Computer",
     url: "https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc",
     docUrl: "https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc",
     category: "flood",

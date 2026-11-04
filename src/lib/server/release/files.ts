@@ -37,7 +37,7 @@ export function sitesGeoJson(d: ReleaseData, origin: string): string {
       type: "FeatureCollection",
       name: d.multisensor ? `GhanaWatch galamsey newly confirmed in ${d.month} (new sites and spread)` : `GhanaWatch likely galamsey first seen in ${d.month}`,
       licence: "CC BY 4.0",
-      attribution: "GhanaWatch, KNUST. Contains modified Copernicus Sentinel data.",
+      attribution: "GhanaWatch. Contains modified Copernicus Sentinel data.",
       features: d.sites.map((s) => ({
         type: "Feature",
         geometry: s.geom ?? { type: "Point", coordinates: [s.lon, s.lat] },

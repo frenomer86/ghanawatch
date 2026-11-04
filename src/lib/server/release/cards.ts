@@ -80,7 +80,7 @@ export function squareCardSvg({ d, total, label, releaseDate, outline }: CardInp
 <rect x="60" y="840" width="620" height="150" rx="18" fill="rgba(255,255,255,0.07)"/>
 <text x="80" y="900" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="${INK}">${ha(d.cumHa)} ha</text>
 <text x="80" y="950" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="24" fill="${SOFT}">since the start of the record${d.pctForest ? ` · ${d.pctForest}% of this month inside forest reserves` : ""}</text>
-<text x="60" y="1030" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#9fb5a8">GhanaWatch, KNUST · released ${esc(releaseDate)} · not a legal finding</text>
+<text x="60" y="1030" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#9fb5a8">GhanaWatch · released ${esc(releaseDate)} · not a legal finding</text>
 <text x="60" y="1058" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="20" fill="#9fb5a8">Contains modified Copernicus Sentinel data</text>
 </svg>`;
 }
@@ -107,7 +107,7 @@ export function wideCardSvg({ d, total, label, releaseDate, outline }: CardInput
 <rect x="620" y="450" width="260" height="110" rx="14" fill="rgba(255,255,255,0.07)"/>
 <text x="640" y="498" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="${INK}">${ha(d.cumHa)} ha</text>
 <text x="640" y="536" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="20" fill="${SOFT}">since the record began</text>
-<text x="60" y="604" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#9fb5a8">GhanaWatch, KNUST · released ${esc(releaseDate)} · contains modified Copernicus Sentinel data · not a legal finding</text>
+<text x="60" y="604" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="18" fill="#9fb5a8">GhanaWatch · released ${esc(releaseDate)} · contains modified Copernicus Sentinel data · not a legal finding</text>
 </svg>`;
 }
 

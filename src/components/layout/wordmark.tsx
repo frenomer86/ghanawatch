@@ -22,7 +22,6 @@ export function Wordmark({ className, compact = false }: { className?: string; c
       {!compact && (
         <span className="whitespace-nowrap font-heading text-lg font-semibold tracking-tight">
           Ghana<span className="font-medium">Watch</span>
-          <span className="ml-1.5 align-middle text-[10px] font-medium uppercase tracking-wider text-muted-foreground">KNUST</span>
         </span>
       )}
     </span>

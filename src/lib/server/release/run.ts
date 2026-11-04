@@ -141,7 +141,7 @@ export async function runRelease(opts: ReleaseOptions): Promise<ReleaseResult> {
     sample: { total: sample.total, confirmed: sample.confirmed, rejected: sample.rejected, unclear: sample.unclear, unchecked: sample.unchecked },
     files,
     licence: "CC BY 4.0",
-    attribution: "GhanaWatch, KNUST. Contains modified Copernicus Sentinel data.",
+    attribution: "GhanaWatch. Contains modified Copernicus Sentinel data.",
     doi: null as string | null,
   };
   if (!dryRun) {

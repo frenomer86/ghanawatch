@@ -28,12 +28,12 @@ export function pressRelease(d: ReleaseData, origin: string, releaseDate: string
     n.newHa > 0
       ? `${ha(n.newHa)} hectares newly mined for gold in ${d.label}, satellite record shows`
       : `No new galamsey passed the checks in ${d.label}; cloud may have hidden the ground`;
-  const lead = `${ha(n.newHa)} hectares of land across ${n.districtsAffected} districts of Ghana were ${d.multisensor ? "newly confirmed as mined for gold, at new sites and where existing sites spread," : "first seen as likely galamsey"} from space in ${d.label}${n.ciLow != null ? `, between ${ha(n.ciLow)} and ${ha(n.ciHigh)} hectares once false alarms and missed sites are allowed for` : ""}, according to the GhanaWatch Galamsey Index published today by researchers at KNUST.${top ? ` ${top.name} (${top.region?.replace(/ Region$/, "") ?? ""}) ranks first, with ${ha(top.newHa)} hectares newly mined, ${top.index.toFixed(1)} hectares for every 100 km² of the district.` : ""}${river ? ` On the ${river.river}, ${river.kmDiscoloured} km of river water turned brown in the same images.` : ""}`;
+  const lead = `${ha(n.newHa)} hectares of land across ${n.districtsAffected} districts of Ghana were ${d.multisensor ? "newly confirmed as mined for gold, at new sites and where existing sites spread," : "first seen as likely galamsey"} from space in ${d.label}${n.ciLow != null ? `, between ${ha(n.ciLow)} and ${ha(n.ciHigh)} hectares once false alarms and missed sites are allowed for` : ""}, according to the GhanaWatch Galamsey Index published today.${top ? ` ${top.name} (${top.region?.replace(/ Region$/, "") ?? ""}) ranks first, with ${ha(top.newHa)} hectares newly mined, ${top.index.toFixed(1)} hectares for every 100 km² of the district.` : ""}${river ? ` On the ${river.river}, ${river.kmDiscoloured} km of river water turned brown in the same images.` : ""}`;
   const since = first ? `Since ${first.label} the record stands at ${ha(n.cumHa)} hectares.` : "";
   const reserves = n.inReservesHa > 0 ? `${ha(n.inReservesHa)} hectares of this month's new mining lies inside forest reserves${d.reserves[0] ? `, the largest share in ${d.reserves[0].name}` : ""}.` : `No new mining was ${d.multisensor ? "confirmed" : "first seen"} inside a forest reserve this month.`;
   const movers = d.top.slice(0, 5).map((t) => `${t.rank}. ${t.name} (${ha(t.newHa)} ha, index ${t.index.toFixed(1)})`).join("; ");
   const paragraphs: DocxParagraph[] = [
-    { text: "GhanaWatch, KNUST · Press release", style: "Heading2" },
+    { text: "GhanaWatch · Press release", style: "Heading2" },
     { text: headline, style: "Title" },
     { text: `Kumasi, ${releaseDate}. For immediate release.`, bold: true },
     { text: lead },
@@ -55,15 +55,15 @@ export function pressRelease(d: ReleaseData, origin: string, releaseDate: string
     { text: "Data", style: "Heading1" },
     { text: `The full index, district outlines and sites are published under CC BY 4.0 at ${origin}/releases/${d.month}/ and through the API at ${origin}/api/v1/index?month=${d.month}. District scorecards: ${origin}/districts. Rivers: ${origin}/rivers.` },
     { text: "About GhanaWatch", style: "Heading1" },
-    { text: "GhanaWatch is an independent satellite monitor of Ghana's land and rivers built at Kwame Nkrumah University of Science and Technology. It publishes the Galamsey Index on a fixed day every month, with the evidence behind every number. It is not a legal finding: it shows what changed on the ground as seen from space." },
+    { text: "GhanaWatch is an independent satellite monitor of Ghana's land and rivers. It publishes the Galamsey Index on a fixed day every month, with the evidence behind every number. It is not a legal finding: it shows what changed on the ground as seen from space." },
     { text: "Contact", style: "Heading1" },
-    { text: `GhanaWatch team, KNUST · ${origin}` },
+    { text: `GhanaWatch team · ${origin}` },
   ];
   const markdown = paragraphs
     .map((p) => (p.style === "Title" ? `# ${p.text}` : p.style === "Heading1" ? `## ${p.text}` : p.style === "Heading2" ? `*${p.text}*` : p.bold ? `**${p.text}**` : p.text))
     .join("\n\n");
   const whatsapp = clip(
-    `*Galamsey Index, ${d.label}*\n${ha(n.newHa)} ha newly mined for gold, ${d.multisensor ? "confirmed" : "first seen"} from space${n.ciLow != null ? ` (likely ${ha(n.ciLow)}–${ha(n.ciHigh)} ha)` : ""}.${top ? `\nWorst district: ${top.name}, ${ha(top.newHa)} ha.` : ""}${river ? `\n${river.river}: ${river.kmDiscoloured} km of water turned brown.` : ""}\n${since}\nFull report and every site: ${origin}/monthly/${d.month}\nGhanaWatch, KNUST`,
+    `*Galamsey Index, ${d.label}*\n${ha(n.newHa)} ha newly mined for gold, ${d.multisensor ? "confirmed" : "first seen"} from space${n.ciLow != null ? ` (likely ${ha(n.ciLow)}–${ha(n.ciHigh)} ha)` : ""}.${top ? `\nWorst district: ${top.name}, ${ha(top.newHa)} ha.` : ""}${river ? `\n${river.river}: ${river.kmDiscoloured} km of water turned brown.` : ""}\n${since}\nFull report and every site: ${origin}/monthly/${d.month}\nGhanaWatch`,
     990,
   );
   const thread = [

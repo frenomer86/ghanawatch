@@ -42,7 +42,7 @@ export interface FeaturedImage {
 export async function releasePdf(d: ReleaseData, origin: string, images: FeaturedImage[]): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Galamsey from Space, ${d.label}`);
-  doc.setAuthor("GhanaWatch, KNUST");
+  doc.setAuthor("GhanaWatch");
   doc.setCreationDate(new Date());
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -54,7 +54,7 @@ export async function releasePdf(d: ReleaseData, origin: string, images: Feature
   const newPage = (title: string) => {
     page = doc.addPage([A4.w, A4.h]);
     y = A4.h - M;
-    page.drawText(winAnsi("GhanaWatch, KNUST"), { x: M, y, size: 9, font: bold, color: MUTED });
+    page.drawText(winAnsi("GhanaWatch"), { x: M, y, size: 9, font: bold, color: MUTED });
     const right = `Galamsey from Space · ${d.label} · index v${d.version}`;
     page.drawText(winAnsi(right), { x: A4.w - M - font.widthOfTextAtSize(right, 9), y, size: 9, font, color: MUTED });
     y -= 30;
@@ -264,8 +264,8 @@ export async function releasePdf(d: ReleaseData, origin: string, images: Feature
     `  manifest.json — file hashes, method and index versions`,
     `API: ${origin}/api/v1/national?month=${d.month} · ${origin}/api/v1/index?month=${d.month} · ${origin}/api/v1/scorecards/{district}`,
     `Rankings: ${origin}/districts · Rivers: ${origin}/rivers · Accuracy: ${origin}/data/accuracy`,
-    "Cite as: GhanaWatch (KNUST). Galamsey from Space, monthly release, " + d.label + ". Index version " + d.version + ".",
-    "Contact: the GhanaWatch team at KNUST. Corrections are welcome and are published.",
+    "Cite as: GhanaWatch. Galamsey from Space, monthly release, " + d.label + ". Index version " + d.version + ".",
+    "Contact: the GhanaWatch team. Corrections are welcome and are published.",
   ])
     text(line, 10);
   footer(page, 8);

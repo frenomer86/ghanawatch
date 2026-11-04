@@ -93,7 +93,7 @@ export function digestText(d: Omit<Digest, "text">, origin: string): string {
     lines.push(`• ${dist.name}: ${dist.sites.length} site${dist.sites.length === 1 ? "" : "s"}, ${fmtHa(dist.ha)} ha${worst?.reserve ? `, inside ${worst.reserve}` : ""} ${worst.url}`);
   }
   const more = d.districts.length > 6 ? `\n…and ${d.districts.length - 6} more districts.` : "";
-  const text = `${head}\n${lines.join("\n")}${more}\nAll sites, with before/after pictures: ${origin}/alerts\nGhanaWatch, KNUST`;
+  const text = `${head}\n${lines.join("\n")}${more}\nAll sites, with before/after pictures: ${origin}/alerts\nGhanaWatch`;
   return text.length <= 1000 ? text : `${text.slice(0, 999)}…`;
 }
 
