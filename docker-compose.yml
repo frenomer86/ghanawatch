@@ -64,9 +64,19 @@ services:
       DB_POOL_MAX: "3"
       # The detection rule measured on 18 Oct 2026 (one clear pass, method s2-galamsey-2.3).
       S2_MIN_AFTER_OBS: "1"
-      # Detector 3.0, the monthly multi-sensor record (docs/detector.md); needs models/gw_mining_unet.*.
-      GW_DETECTOR: multisensor
+      # Detector 3.0, the monthly multi-sensor record (docs/detector.md); needs models/gw_mining_unet.*. Off
+      # (legacy) until deploy/console-backfill.sh has built the record; then set GW_DETECTOR=multisensor in
+      # .env.production. 20 m inputs everywhere (the model scores the same at 20 m) and a record from 2018 (a
+      # year before the index series starts) keep the downloads to what a KVM 4 plan carries.
+      GW_DETECTOR: ${GW_DETECTOR:-legacy}
+      GW_TS_GOLD_RES: "20"
+      GW_TS_START: "2018-01"
+      GW_TS_BUDGET_MINUTES: "90"
     command: ["npm", "run", "pipeline", "--", "--every=180"]
+    # The tracker state, terrain cache and radar-flood bookkeeping (/app/.data/ts, /app/.data/s1-flood) must
+    # survive a rebuild, like the web container's uploads.
+    volumes:
+      - uploads:/app/.data
     depends_on:
       db:
         condition: service_healthy

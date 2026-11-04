@@ -42,6 +42,47 @@ Measured with `research/eval/measure-cost.ts` (October 2026, mining belt, a clea
 KVM 2 (2 vCPU, 8 GB, 100 GB, 8 TB) runs the website and the two-date scan, and the live record once the backfill has
 been done elsewhere; KVM 1 is too small.
 
+## From the Hostinger Web Console (no SSH, nothing uploaded from the PC)
+
+The code goes to a private GitHub repository (`frenomer86/ghanawatch`), and the server pulls it from there, so the
+PC's connection is never used. Open hPanel → **VPS** → **Manage** → **Web Console** and paste, one block at a time:
+
+```bash
+# 1. Let the server read the private repository (once)
+apt-get update -y && apt-get install -y git
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 && cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the line that starts with `ssh-ed25519` into GitHub → the repository → **Settings** → **Deploy keys** → **Add deploy
+key** (title `hostinger`, leave "Allow write access" off).
+
+```bash
+# 2. Fetch the code, prepare the server, write the secrets and start GhanaWatch (once; 15–20 minutes)
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+git clone git@github.com:frenomer86/ghanawatch.git /opt/ghanawatch
+bash /opt/ghanawatch/deploy/console-setup.sh your-domain.org you@example.org
+```
+
+The script prints the administrator's temporary password once. In the domain's DNS, point an **A record** for the
+domain (and `www`) to the VPS IP; Caddy obtains the HTTPS certificate by itself once DNS answers.
+
+```bash
+# 3. Build detector 3.0's record (once; runs in the background for days, resumable)
+bash /opt/ghanawatch/deploy/console-backfill.sh 2     # mining belt first
+docker logs -f --tail 50 gw-backfill                  # Ctrl+C stops watching, not the job
+# when it ends: bash /opt/ghanawatch/deploy/console-backfill.sh 1   (the rest of Ghana)
+# when that ends: set GW_DETECTOR=multisensor in /opt/ghanawatch/.env.production, then step 4
+```
+
+```bash
+# 4. Every update afterwards
+bash /opt/ghanawatch/deploy/console-update.sh
+```
+
+The pipeline container keeps its tracker state, terrain cache and flood bookkeeping on the `uploads` volume, so
+rebuilds never lose the record. The server runs the record from 2018 at 20 m (`docker-compose.yml`), which keeps
+the backfill to about 9 TB for the mining belt and about 14 TB for the rest.
+
 ## What the owner does (once)
 
 1. Buy the VPS in hPanel and choose Ubuntu 24.04.
