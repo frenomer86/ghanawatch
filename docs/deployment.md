@@ -50,7 +50,9 @@ PC's connection is never used. Open hPanel → **VPS** → **Manage** → **Web 
 ```bash
 # 1. Let the server read the private repository (once)
 apt-get update -y && apt-get install -y git
-ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 && cat ~/.ssh/id_ed25519.pub
+ssh-keygen -t ed25519 -N "" -C hostinger -f ~/.ssh/github_ghanawatch
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_ghanawatch\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+cat ~/.ssh/github_ghanawatch.pub
 ```
 
 Copy the line that starts with `ssh-ed25519` into GitHub → the repository → **Settings** → **Deploy keys** → **Add deploy
