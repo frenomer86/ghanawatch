@@ -214,7 +214,8 @@ export function publicNote(review: AutoReview, f: Pick<ReviewFacts, "photo">): s
   if (review.reasons.includes("photo_matches") && review.photoDistanceM != null && f.photo?.takenAt) {
     parts.push(`the photo's own GPS position is ${km(review.photoDistanceM)} from this spot and it was taken on ${fmtDay(f.photo.takenAt)}`);
   }
-  if (review.reasons.includes("corroborated")) parts.push(`it matches ${review.evidence.slice(0, 3).map(evidenceLine).join("; ")}`);
+  const lower = (t: string) => (/^[A-Z][a-z]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t);
+  if (review.reasons.includes("corroborated")) parts.push(`it matches ${review.evidence.slice(0, 3).map((e) => lower(evidenceLine(e))).join("; ")}`);
   if (review.reasons.includes("on_site")) parts.push("it was sent from the spot with the phone's own location, with a photo taken that day or the day before");
   return `Checked automatically: ${parts.join("; and ")}.`;
 }

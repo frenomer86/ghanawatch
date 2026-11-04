@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { setRequestLocale } from "next-intl/server";
-import { Droplets } from "lucide-react";
+
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { monthLabel, monthOf } from "@/lib/domain/index";
@@ -48,7 +48,6 @@ async function Rivers() {
           <li key={r.slug} className="rounded-xl border bg-card p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="flex items-center gap-2 text-xl font-semibold">
-                <Droplets className="size-5 text-river-600" aria-hidden />
                 <Link href={`/rivers/${r.slug}`} className="underline-offset-2 hover:underline">
                   {r.river}
                 </Link>

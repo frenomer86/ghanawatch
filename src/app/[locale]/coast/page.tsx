@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { setRequestLocale } from "next-intl/server";
-import { Waves } from "lucide-react";
+
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -57,7 +57,7 @@ async function Body() {
   const pct = (n: number) => `${Math.round((n / t.measured) * 100)}%`;
   return (
     <>
-      <dl className="mt-8 grid gap-3 sm:grid-cols-3">
+      <dl className="mt-10 grid gap-x-6 gap-y-8 sm:grid-cols-3">
         <Card label="Shoreline retreating" value={pct(t.retreating)} sub={`${t.retreating} of ${t.measured} kilometres, a clear trend since 2000`} alert />
         <Card label="Retreating 2 m a year or faster" value={`${t.severe} km`} sub="where homes, roads and farms are lost within a generation" alert={t.severe > 0} />
         <Card label="Shoreline growing" value={pct(t.growing)} sub="sand building up or land reclaimed, beside sea defences, harbours and river mouths" />
@@ -65,7 +65,6 @@ async function Body() {
 
       <section className="mt-10" aria-labelledby="erode-h">
         <h2 id="erode-h" className="flex items-center gap-2 text-2xl font-semibold">
-          <Waves className="size-6 text-sky-700" aria-hidden />
           Where the sea is advancing fastest
         </h2>
         <p className="mt-2 max-w-[75ch] text-sm text-muted-foreground">
@@ -130,10 +129,10 @@ function Table({ rows, label }: { rows: CoastPointRow[]; label: string }) {
 
 function Card({ label, value, sub, alert }: { label: string; value: string; sub: string; alert?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${alert ? "border-sev-elevated/40 bg-sev-elevated-tint" : "bg-card"}`}>
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
-      <dd className="text-xs text-muted-foreground">{sub}</dd>
+    <div className={`border-t-2 pt-2.5 ${alert ? "border-sev-elevated-fill" : "border-foreground/70"}`}>
+      <dt className="text-[0.9375rem] text-muted-foreground">{label}</dt>
+      <dd className={`mt-0.5 font-heading text-[1.75rem] font-semibold leading-tight tabular-nums ${alert ? "text-sev-elevated" : ""}`}>{value}</dd>
+      <dd className="mt-1 text-sm text-muted-foreground">{sub}</dd>
     </div>
   );
 }

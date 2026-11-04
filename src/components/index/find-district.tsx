@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { slugify } from "@/lib/domain/scorecards";
 
 /**
@@ -12,14 +11,14 @@ export function FindDistrict({ names, locale }: { names: string[]; locale: strin
       <label htmlFor="find-district" className="sr-only">
         District name
       </label>
-      <input id="find-district" name="q" list="district-names" placeholder="Type your district, e.g. Amansie Central" autoComplete="off" required className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm" />
+      <input id="find-district" name="q" list="district-names" placeholder="Type your district, e.g. Amansie Central" autoComplete="off" required className="h-11 min-w-0 flex-1 rounded-sm border border-input bg-background px-3 text-base" />
       <datalist id="district-names">
         {names.map((n) => (
           <option key={n} value={n} data-slug={slugify(n)} />
         ))}
       </datalist>
-      <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-forest-900 px-4 py-2 text-sm font-medium text-white hover:bg-forest-700">
-        See my district <ArrowRight className="size-4" aria-hidden />
+      <button type="submit" className="h-11 rounded-sm bg-forest-700 px-4 text-[0.9375rem] font-semibold text-white hover:bg-forest-900">
+        See my district
       </button>
     </form>
   );

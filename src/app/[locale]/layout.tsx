@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Lexend, Source_Sans_3 } from "next/font/google";
+import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
@@ -9,14 +9,14 @@ import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import "../globals.css";
 
 /**
- * Lexend for headings and interface labels, Source Sans 3 for body copy.
- * Both include the Latin Extended glyphs Twi needs (ɛ ɔ Ɛ Ɔ). Only two
- * weights of each are loaded; the body face is the one preloaded.
+ * Source Serif 4 for headings and the published figures, Source Sans 3 for the interface and body copy: one
+ * family designed to work together, the register of a statistical bulletin rather than an app. Both carry the
+ * letters Twi needs (ɛ ɔ Ɛ Ɔ). The body face is the one preloaded.
  */
-const heading = Lexend({
+const heading = Source_Serif_4({
   variable: "--font-heading",
   subsets: ["latin", "latin-ext"],
-  weight: ["500", "600"],
+  weight: ["600", "700"],
   display: "swap",
   preload: false,
 });
@@ -33,7 +33,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f3d2e" },
+    { media: "(prefers-color-scheme: light)", color: "#0c3b2b" },
     { media: "(prefers-color-scheme: dark)", color: "#0e1512" },
   ],
 };

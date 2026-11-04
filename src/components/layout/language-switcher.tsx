@@ -20,7 +20,7 @@ export function LanguageSwitcher() {
     <Button
       variant="ghost"
       size="sm"
-      className="font-medium"
+      className="font-medium text-white/90 hover:bg-white/10 hover:text-white"
       aria-label={`${t("language")}: ${LABEL[next]}`}
       lang={next}
       onClick={() =>

@@ -40,9 +40,11 @@ export const GROUPS = [
 ] as const;
 export type NavGroup = (typeof GROUPS)[number];
 
+/** Masthead navigation: white on forest, the current section marked by a rule under it. */
 export const GROUP_TRIGGER_CLASS =
-  "inline-flex items-center gap-1 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent";
-export const MENU_BUTTON_CLASS = "md:hidden";
+  "inline-flex h-topbar items-center gap-1 whitespace-nowrap px-3 text-[0.9375rem] text-white/85 transition-colors hover:text-white data-[state=open]:text-white";
+export const NAV_ACTIVE_CLASS = "text-white shadow-[inset_0_-3px_0_0_var(--sev-watch-fill)]";
+export const MENU_BUTTON_CLASS = "md:hidden text-white hover:bg-white/10 hover:text-white";
 
 type Menus = typeof import("./top-bar-menus");
 let menus: Promise<Menus> | null = null;
@@ -101,12 +103,12 @@ export function TopBar({ className }: { className?: string }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   return (
-    <header className={cn("sticky top-0 z-40 h-topbar border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80", className)}>
-      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-4 px-4">
-        <Link href="/" className="rounded-md" aria-label="GhanaWatch">
-          <Wordmark />
+    <header className={cn("sticky top-0 z-40 h-topbar bg-forest-700 text-white", className)}>
+      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-6 px-4 md:px-6">
+        <Link href="/" className="rounded-sm focus-visible:outline-white" aria-label="GhanaWatch">
+          <Wordmark onDark />
         </Link>
-        <nav aria-label="Primary" className="hidden md:flex md:items-center md:gap-1">
+        <nav aria-label="Primary" className="hidden md:flex md:items-center">
           <NavLink href="/map" active={isActive(pathname, "/map")}>
             {t("map")}
           </NavLink>
@@ -120,7 +122,7 @@ export function TopBar({ className }: { className?: string }) {
                   return Group;
                 }}
                 placeholder={(h) => (
-                  <button type="button" aria-haspopup="menu" aria-expanded={false} className={cn(GROUP_TRIGGER_CLASS, active && "bg-forest-50 font-medium text-forest-900 dark:bg-secondary dark:text-foreground")} {...h}>
+                  <button type="button" aria-haspopup="menu" aria-expanded={false} className={cn(GROUP_TRIGGER_CLASS, active && NAV_ACTIVE_CLASS)} {...h}>
                     {t(g.key)}
                     <ChevronDown className="size-3.5 opacity-60" aria-hidden />
                   </button>
@@ -150,11 +152,7 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={cn(
-        "whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-        "text-foreground",
-        active && "bg-forest-50 font-medium text-forest-900 dark:bg-secondary dark:text-foreground",
-      )}
+      className={cn("inline-flex h-topbar items-center whitespace-nowrap px-3 text-[0.9375rem] text-white/85 transition-colors hover:text-white", active && NAV_ACTIVE_CLASS)}
     >
       {children}
     </Link>

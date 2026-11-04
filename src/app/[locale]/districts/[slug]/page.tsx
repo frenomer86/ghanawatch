@@ -12,6 +12,7 @@ import { districtAirHeat } from "@/lib/db/repo/air-heat";
 import { reservoirsInDistrict } from "@/lib/db/repo/reservoirs";
 import { districtCoast } from "@/lib/db/repo/coast";
 import { districtPower } from "@/lib/db/repo/power";
+import { DistrictMap } from "@/components/maps/district-map";
 import { AQI_TEXT, HEAT_TEXT } from "@/lib/domain/air-heat";
 import { shareOfArea } from "@/lib/domain/scorecards";
 import { districtSeries, latestClosedMonth, releaseFor } from "@/lib/server/index/read";
@@ -118,7 +119,7 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
       </nav>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">{c.name}</h1>
+          <h1 className="text-[2.5rem] font-bold leading-tight">{c.name}</h1>
           <p className="mt-1 text-muted-foreground">
             {c.rank ? (
               <>
@@ -138,7 +139,7 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-start gap-5">
           {center && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/map?lat=${center.lat.toFixed(4)}&lon=${center.lon.toFixed(4)}&z=${zoom}&type=surface_disturbance&hours=2160`}>
@@ -146,10 +147,11 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
               </Link>
             </Button>
           )}
+          <DistrictMap highlight={c.id} title={`Where ${c.name} lies in Ghana`} legend={false} className="hidden w-28 shrink-0 sm:block" />
         </div>
       </div>
 
-      <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
         <Stat
           tone="mining"
           label="Likely mining"

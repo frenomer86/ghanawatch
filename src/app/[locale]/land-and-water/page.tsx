@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { connection } from "next/server";
 import { setRequestLocale } from "next-intl/server";
-import { ArrowRight, CloudRain, Droplets, MapIcon, Sun, Waves } from "lucide-react";
+import { MapIcon } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -44,7 +44,7 @@ export default async function LandAndWaterPage({ params }: PageProps<"/[locale]/
             <Link href="/districts">Find your district</Link>
           </Button>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-12 grid gap-x-12 gap-y-14 md:grid-cols-2">
           <Suspense fallback={<Skeleton className="h-56 w-full" />}>
             <Rivers />
           </Suspense>
@@ -66,17 +66,13 @@ export default async function LandAndWaterPage({ params }: PageProps<"/[locale]/
   );
 }
 
-function Section({ icon, title, href, cta, children }: { icon: ReactNode; title: string; href: string; cta: string; children: ReactNode }) {
+function Section({ title, href, cta, children }: { title: string; href: string; cta: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col rounded-xl border bg-card p-5">
-      <h2 className="flex items-center gap-2 text-xl font-semibold">
-        {icon}
-        {title}
-      </h2>
-      <div className="mt-2 flex-1 text-sm">{children}</div>
-      <Link href={href} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-link underline">
+    <section className="flex flex-col border-t-2 border-foreground/70 pt-4">
+      <h2 className="text-2xl">{title}</h2>
+      <div className="mt-2 flex-1 text-[0.9375rem] text-ink-soft">{children}</div>
+      <Link href={href} className="mt-4 text-[0.9375rem] text-link underline">
         {cta}
-        <ArrowRight className="size-4" aria-hidden />
       </Link>
     </section>
   );
@@ -84,7 +80,7 @@ function Section({ icon, title, href, cta, children }: { icon: ReactNode; title:
 
 const Figure = ({ value, label }: { value: string; label: string }) => (
   <div>
-    <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
+    <dd className="font-heading text-[1.625rem] font-semibold leading-tight text-foreground tabular-nums">{value}</dd>
     <dt className="text-xs text-muted-foreground">{label}</dt>
   </div>
 );
@@ -107,7 +103,7 @@ async function Rivers() {
   const worst = [...mapped].sort((a, b) => b.kmDiscoloured - a.kmDiscoloured)[0];
   const dredgers = rivers?.reduce((a, r) => a + r.dredgerTargets, 0) ?? 0;
   return (
-    <Section icon={<Droplets className="size-5 text-river-600" aria-hidden />} title="Rivers" href="/rivers" cta="All rivers, reach by reach">
+    <Section title="Rivers" href="/rivers" cta="All rivers, reach by reach">
       {rivers ? (
         <>
           <p>Rivers turned muddy by mining this month, and dredgers seen by radar on the water.</p>
@@ -129,7 +125,7 @@ async function Floods() {
   const [rain, radar] = await Promise.all([safely(() => rainOutlook()), safely(() => radarFloods(30, 1))]);
   const heavy = rain?.filter((o) => o.maxMm >= RAIN_LEVELS.heavy) ?? [];
   return (
-    <Section icon={<CloudRain className="size-5 text-sky-700" aria-hidden />} title="Floods" href="/floods" cta="Rain outlook, river forecasts and flooded land">
+    <Section title="Floods" href="/floods" cta="Rain outlook, river forecasts and flooded land">
       {rain || radar ? (
         <>
           <p>Heavy rain in the next three days, and land radar has seen under water in the last 30 days.</p>
@@ -150,7 +146,7 @@ async function Reservoirs() {
   await connection();
   const cards = (await safely(() => reservoirCards()))?.filter((c) => c.summary.latest) ?? [];
   return (
-    <Section icon={<Droplets className="size-5 text-sky-700" aria-hidden />} title="Reservoirs and lakes" href="/reservoirs" cta="Every reservoir over the last year">
+    <Section title="Reservoirs and lakes" href="/reservoirs" cta="Every reservoir over the last year">
       {cards.length ? (
         <>
           <p>Share of each water body under water at the latest radar passes, and the change over a month.</p>
@@ -181,7 +177,7 @@ async function Coast() {
   const t = pts?.length ? coastTotals(pts) : null;
   const worst = pts?.length ? strongestStretches(pts, -1, 1)[0] : undefined;
   return (
-    <Section icon={<Waves className="size-5 text-sky-700" aria-hidden />} title="Coast" href="/coast" cta="Where the sea is advancing, kilometre by kilometre">
+    <Section title="Coast" href="/coast" cta="Where the sea is advancing, kilometre by kilometre">
       {t ? (
         <>
           <p>How Ghana&apos;s shoreline has moved since 2000, measured every kilometre.</p>
@@ -203,7 +199,7 @@ async function AirHeat() {
   const all = await safely(() => airHeatOutlook());
   const c = all?.length ? levelCounts(all) : null;
   return (
-    <Section icon={<Sun className="size-5 text-orange-600" aria-hidden />} title="Air and heat" href="/air" cta="Every district, today and the next three days">
+    <Section title="Air and heat" href="/air" cta="Every district, today and the next three days">
       {c && all ? (
         <>
           <p>Air quality, Harmattan dust and dangerous heat today, from forecasts for every district.</p>

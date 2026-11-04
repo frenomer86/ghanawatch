@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
-import { Sun, Wind } from "lucide-react";
+
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -60,7 +60,7 @@ async function Body({ locale }: { locale: Locale }) {
 
   return (
     <>
-      <dl className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-10 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         <Card label="Districts with unhealthy air today" value={`${unhealthy} of ${all.length}`} sub={`${air.unhealthy + air.veryUnhealthy + air.hazardous} unhealthy for everyone`} alert={unhealthy > 0} />
         <Card
           label="Worst air today"
@@ -80,7 +80,6 @@ async function Body({ locale }: { locale: Locale }) {
 
       <section className="mt-10" aria-labelledby="air-h">
         <h2 id="air-h" className="flex items-center gap-2 text-2xl font-semibold">
-          <Wind className="size-6 text-sky-700" aria-hidden />
           Air quality
         </h2>
         <p className="mt-2 max-w-[75ch] text-sm text-muted-foreground">
@@ -135,7 +134,6 @@ async function Body({ locale }: { locale: Locale }) {
 
       <section className="mt-12" aria-labelledby="heat-h">
         <h2 id="heat-h" className="flex items-center gap-2 text-2xl font-semibold">
-          <Sun className="size-6 text-orange-600" aria-hidden />
           Heat
         </h2>
         <p className="mt-2 max-w-[75ch] text-sm text-muted-foreground">
@@ -191,7 +189,7 @@ async function Body({ locale }: { locale: Locale }) {
 
       <section className="mt-12 grid gap-8 lg:grid-cols-2" aria-label="What the levels mean">
         <div>
-          <h2 className="text-xl font-semibold">What the air levels mean</h2>
+          <h2 className="text-xl">What the air levels mean</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {AQI_LEVELS.map((l) => (
               <li key={l} className="flex gap-3">
@@ -203,7 +201,7 @@ async function Body({ locale }: { locale: Locale }) {
           <p className="mt-3 text-xs text-muted-foreground">0–50 good, 51–100 moderate, 101–150 unhealthy for sensitive groups, 151–200 unhealthy, 201–300 very unhealthy, above 300 hazardous.</p>
         </div>
         <div>
-          <h2 className="text-xl font-semibold">What the heat levels mean</h2>
+          <h2 className="text-xl">What the heat levels mean</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {HEAT_LEVELS.filter((l) => l !== "none").map((l) => (
               <li key={l} className="flex gap-3">
@@ -227,10 +225,10 @@ async function Body({ locale }: { locale: Locale }) {
 
 function Card({ label, value, sub, alert }: { label: string; value: string; sub: string; alert?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${alert ? "border-sev-elevated/40 bg-sev-elevated-tint" : "bg-card"}`}>
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
-      <dd className="text-xs text-muted-foreground">{sub}</dd>
+    <div className={`border-t-2 pt-2.5 ${alert ? "border-sev-elevated-fill" : "border-foreground/70"}`}>
+      <dt className="text-[0.9375rem] text-muted-foreground">{label}</dt>
+      <dd className={`mt-0.5 font-heading text-[1.75rem] font-semibold leading-tight tabular-nums ${alert ? "text-sev-elevated" : ""}`}>{value}</dd>
+      <dd className="mt-1 text-sm text-muted-foreground">{sub}</dd>
     </div>
   );
 }

@@ -52,7 +52,7 @@ export function MachineryPanel({ lat, lon, captures, sightings, day, formatDista
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("newerElsewhere")}</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{t("newerElsewhere")}</h3>
         <p className="mt-1 text-xs text-muted-foreground">{t("newerElsewhereHelp")}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {links.map((l) => (
@@ -67,7 +67,7 @@ export function MachineryPanel({ lat, lon, captures, sightings, day, formatDista
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("taggedHeading")}</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{t("taggedHeading")}</h3>
         {sightings.length === 0 ? (
           <p className="mt-1.5 text-sm text-muted-foreground">{t("taggedNone")}</p>
         ) : (

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { TopBar } from "./top-bar";
 import { BottomNav } from "./bottom-nav";
+import { SiteFooter } from "./site-footer";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,13 +20,14 @@ export function AppShell({ children, fullBleed = false, className }: { children:
         id="main"
         tabIndex={-1}
         className={cn(
-          "flex-1 pb-bottomnav md:pb-0 outline-none",
-          !fullBleed && "mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 md:py-8",
+          "flex-1 outline-none",
+          fullBleed ? "pb-bottomnav md:pb-0" : "mx-auto w-full max-w-[1600px] px-4 pt-8 md:px-6 md:pt-12",
           className,
         )}
       >
         {children}
       </main>
+      {!fullBleed && <SiteFooter />}
       <BottomNav />
     </>
   );

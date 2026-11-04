@@ -3,7 +3,6 @@ import { getFormatter } from "next-intl/server";
 import { nationalScanStatus } from "@/lib/db/repo/sources";
 import type { Locale } from "@/lib/domain/types";
 import { Link } from "@/i18n/navigation";
-import { Pickaxe } from "lucide-react";
 
 /**
  * Galamsey watch: progress of the nationwide Sentinel-2 scan and what it has
@@ -20,7 +19,6 @@ export async function GalamseyWatch({ locale }: { locale: Locale }) {
     <section className="rounded-xl border bg-card p-5" aria-labelledby="galamsey-watch-h">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="galamsey-watch-h" className="flex items-center gap-2 text-lg font-semibold">
-          <Pickaxe className="size-5 text-laterite-600" aria-hidden />
           Galamsey watch
         </h2>
         {s.lastScanAt && (

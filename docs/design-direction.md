@@ -55,9 +55,11 @@ Grounded in the landscape the platform watches rather than in a government templ
 
 All text colours meet WCAG AA (≥ 4.5:1) on their backgrounds; severity is never conveyed by colour alone (word + dot, icon for type). A dark theme exists for imagery viewing but light is the default per SRS §10.3.
 
-**Type**: Lexend for headings and interface labels (500/600), Source Sans 3 for body (400/600), the "Corporate Trust" pairing surfaced by the ui-ux-pro-max search. Both include the Twi glyphs ɛ ɔ Ɛ Ɔ (verified against Google Fonts coverage). Body 17 px / 1.6, measure 68 ch on content pages, tabular figures everywhere numbers align.
+**Type** (revised 4 November 2026): Source Serif 4 for headings and published figures, Source Sans 3 for the interface and body: one family designed to work together, in the register of a statistical bulletin rather than an app (the earlier Lexend headings read as a generic app kit). Both carry the Twi glyphs ɛ ɔ Ɛ Ɔ. Body 17 px / 1.6, measure 68 ch on content pages, tabular figures everywhere numbers align.
 
-**Shape and motion**: 6 px radius, one shadow level for sheets and popovers, no decorative animation; motion only answers an action (sheet open, map fly-to) and respects `prefers-reduced-motion`.
+**Revision of 4 November 2026**: a forest-green masthead with a serif wordmark and a gold rule under the current section; white pages; headline figures set as a rule, a label, the figure in the serif and a note, instead of tinted tiles; no decorative icons beside headings, no all-caps labels, no arrows appended to links; event lists as entries with a left rule coloured by type; a site footer with the record, data and licence; and one memorable element, the map of Ghana's districts drawn on the server, shaded in ochre by the land newly dug for gold (home page) or picking out the district (district pages).
+
+**Shape and motion**: 4 px radius, one shadow level for sheets and popovers, no decorative animation; motion only answers an action (sheet open, map fly-to) and respects `prefers-reduced-motion`.
 
 **The one memorable element**: the two-date stamp. Every detection, everywhere it appears, carries "Seen by satellite 9 Oct 2026 · Detected 11 Oct 2026" in the same typographic treatment. It is the SRS's central trust requirement and the thing no reference site does consistently.
 

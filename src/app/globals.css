@@ -15,26 +15,27 @@
 :root {
   /* primitives */
   --gw-forest-950: #06201a;
-  --gw-forest-900: #0b2e23;
-  --gw-forest-700: #0f3d2e;
-  --gw-forest-500: #1f6f50;
+  --gw-forest-900: #0a2e22;
+  --gw-forest-700: #0c3b2b;
+  --gw-forest-500: #1d6a4c;
   --gw-forest-300: #7fb79b;
   --gw-forest-100: #dcebe3;
   --gw-forest-50: #eef5f1;
   --gw-river-700: #245a82;
   --gw-river-600: #2f6f9f;
   --gw-river-100: #dce9f3;
-  --gw-laterite-700: #8a4221;
-  --gw-laterite-600: #a8512a;
-  --gw-laterite-100: #f3e3da;
-  --gw-ink: #15201b;
-  --gw-ink-soft: #3f4c46;
-  --gw-muted: #5c6a63;
-  --gw-paper: #f5f7f4;
-  --gw-paper-deep: #e9eee9;
+  /* Ochre: the colour of freshly dug laterite and the muddy water of mining pits, used only for mined land. */
+  --gw-laterite-700: #7a4f0a;
+  --gw-laterite-600: #a86f12;
+  --gw-laterite-100: #f6ecd8;
+  --gw-ink: #14211b;
+  --gw-ink-soft: #3a4741;
+  --gw-muted: #5a6761;
+  --gw-paper: #ffffff;
+  --gw-paper-deep: #f1f4f2;
   --gw-surface: #ffffff;
-  --gw-line: #d9e0db;
-  --gw-line-strong: #b9c4bd;
+  --gw-line: #d6ddd8;
+  --gw-line-strong: #aeb9b2;
 
   /* severity: text (dark, ≥4.5:1 on white), fill (map marker), tint (chip background) */
   --sev-normal-text: #22663f;
@@ -75,7 +76,7 @@
   --chart-3: var(--gw-laterite-600);
   --chart-4: var(--sev-watch-fill);
   --chart-5: var(--gw-forest-300);
-  --radius: 0.375rem;
+  --radius: 0.25rem;
   --sidebar: var(--gw-surface);
   --sidebar-foreground: var(--gw-ink);
   --sidebar-primary: var(--gw-forest-700);
@@ -143,7 +144,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body), "Source Sans 3", "Noto Sans", system-ui, sans-serif;
-  --font-heading: var(--font-heading), "Lexend", system-ui, sans-serif;
+  --font-heading: var(--font-heading), "Source Serif 4", Georgia, serif;
   --font-mono: ui-monospace, "Cascadia Mono", Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -245,10 +246,16 @@
     text-rendering: optimizeLegibility;
     overflow-wrap: anywhere;
   }
-  h1, h2, h3, h4, .font-heading {
-    font-family: var(--font-heading), "Lexend", system-ui, sans-serif;
-    letter-spacing: -0.01em;
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-heading), "Source Serif 4", Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
     text-wrap: balance;
+    font-optical-sizing: auto;
+  }
+  /* Fourth-level headings are interface labels, in the body face. */
+  h4 {
+    font-weight: 600;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;

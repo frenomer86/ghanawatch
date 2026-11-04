@@ -62,7 +62,7 @@ describe("automatic approval", () => {
   it("writes a public note with distances and dates but nothing about the reporter", () => {
     const f = base({ photo: photoAt(0.002, "2026-11-04T09:00:00Z"), evidence: [sat] });
     const note = publicNote(decide(f, now), f);
-    expect(note).toMatch(/^Checked automatically: the photo's own GPS position is 2\d\d m from this spot and it was taken on 4 Nov 2026; and it matches Disturbed ground near a river \(satellite, 20 Oct 2026, 310 m away\)\.$/);
+    expect(note).toMatch(/^Checked automatically: the photo's own GPS position is 2\d\d m from this spot and it was taken on 4 Nov 2026; and it matches disturbed ground near a river \(satellite, 20 Oct 2026, 310 m away\)\.$/);
   });
 });
 

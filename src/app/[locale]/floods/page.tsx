@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
-import { CloudRain, MapIcon, Radar, Waves } from "lucide-react";
+import { MapIcon } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -61,7 +61,6 @@ export default async function FloodsPage({ params }: PageProps<"/[locale]/floods
             </Suspense>
             <section className="rounded-xl border bg-card p-5">
               <h2 className="flex items-center gap-2 font-heading text-lg font-semibold">
-                <Waves className="size-5 text-sky-700" aria-hidden />
                 Land that has flooded before
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -108,7 +107,6 @@ async function RainOutlook({ locale }: { locale: Locale }) {
   return (
     <section>
       <h2 className="flex items-center gap-2 text-2xl font-semibold">
-        <CloudRain className="size-6 text-sky-700" aria-hidden />
         Rain in the next three days
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -172,7 +170,6 @@ async function RadarFloods({ locale }: { locale: Locale }) {
   return (
     <section>
       <h2 className="flex items-center gap-2 text-2xl font-semibold">
-        <Radar className="size-6 text-sky-700" aria-hidden />
         Seen under water by radar
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -280,7 +277,7 @@ async function Encroachments({ locale }: { locale: Locale }) {
                   <span>After {date(e.afterDate)}</span>
                 </div>
                 <div className="p-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-sky-800">
+                  <p className="text-xs font-semibold text-sky-800">
                     In a {WATERWAY_LABEL[e.waterwayKind] ?? "waterway"}
                     {e.waterwayName ? ` · ${e.waterwayName}` : ""}
                   </p>

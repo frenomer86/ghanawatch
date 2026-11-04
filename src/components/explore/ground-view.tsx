@@ -418,7 +418,7 @@ export function GroundView({ lat, lon, eventId, initialMode = "photo", initialRe
       <aside className="w-full border-t bg-background md:w-[26rem] md:shrink-0 md:overflow-y-auto md:border-l md:border-t-0" aria-label={t("title")}>
         <div className="space-y-7 p-4 md:p-5">
           <header>
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
               <Rotate3d className="size-4" aria-hidden />
               {t("title")}
             </p>
@@ -566,7 +566,7 @@ export function GroundView({ lat, lon, eventId, initialMode = "photo", initialRe
               {t("groundHeading")}
             </h2>
 
-            <h3 className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("streetHeading")}</h3>
+            <h3 className="mt-3 text-sm font-semibold text-muted-foreground">{t("streetHeading")}</h3>
             {groundLoading && <Skeleton className="mt-2 h-20 w-full" />}
             {ground && ground.street.length === 0 && !ground.google && <p className="mt-1.5 text-sm text-muted-foreground">{t("streetNone")}</p>}
             {ground && ground.street.length > 0 && (
@@ -597,7 +597,7 @@ export function GroundView({ lat, lon, eventId, initialMode = "photo", initialRe
               <p className="text-xs text-muted-foreground">{t("googleStreetViewHelp")}</p>
             </div>
 
-            <h3 className="mt-5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
               <Images className="size-3.5" aria-hidden />
               {t("photosHeading")}
             </h3>

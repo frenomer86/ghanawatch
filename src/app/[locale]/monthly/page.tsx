@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { setRequestLocale } from "next-intl/server";
-import { ChevronRight, FileDown, FileText, Newspaper } from "lucide-react";
+import { ChevronRight, FileDown, Newspaper } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { monthLabel } from "@/lib/domain/index";
@@ -58,7 +58,6 @@ async function Months() {
         return (
           <li key={m} className="p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <FileText className="size-5 text-laterite-600" aria-hidden />
               <Link href={`/monthly/${m}`} className="font-medium text-link underline-offset-2 hover:underline">
                 {monthLabel(m)}
               </Link>
@@ -100,7 +99,6 @@ async function Months() {
       {running.map((m) => (
         <li key={m}>
           <Link href={`/monthly/${m}`} className="flex items-center gap-3 p-4 hover:bg-accent">
-            <FileText className="size-5 text-muted-foreground" aria-hidden />
             <span className="font-medium">{monthLabel(m)}</span>
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Month in progress, live figures</span>
           </Link>

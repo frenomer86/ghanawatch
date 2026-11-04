@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { GROUPS, GROUP_TRIGGER_CLASS, MENU_BUTTON_CLASS, isActive, type NavGroup } from "./top-bar";
+import { GROUPS, GROUP_TRIGGER_CLASS, MENU_BUTTON_CLASS, NAV_ACTIVE_CLASS, isActive, type NavGroup } from "./top-bar";
 import { Wordmark } from "./wordmark";
 
 /**
@@ -21,14 +21,14 @@ export function GroupDropdown({ group }: { group: NavGroup }) {
   const active = group.items.some((i) => isActive(pathname, i.href));
   return (
     <DropdownMenu defaultOpen>
-      <DropdownMenuTrigger className={cn(GROUP_TRIGGER_CLASS, active && "bg-forest-50 font-medium text-forest-900 dark:bg-secondary dark:text-foreground")}>
+      <DropdownMenuTrigger className={cn(GROUP_TRIGGER_CLASS, active && NAV_ACTIVE_CLASS)}>
         {t(group.key)}
         <ChevronDown className="size-3.5 opacity-60" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-48">
+      <DropdownMenuContent align="start" sideOffset={0} className="min-w-52 rounded-none rounded-b-sm border-t-0 py-1.5">
         {group.items.map((i) => (
           <DropdownMenuItem key={i.key} asChild>
-            <Link href={i.href} aria-current={isActive(pathname, i.href) ? "page" : undefined} className={cn("cursor-pointer text-sm", isActive(pathname, i.href) && "font-medium text-forest-900")}>
+            <Link href={i.href} aria-current={isActive(pathname, i.href) ? "page" : undefined} className={cn("cursor-pointer px-3 py-2 text-[0.9375rem]", isActive(pathname, i.href) && "font-semibold text-forest-900")}>
               {t(i.key)}
             </Link>
           </DropdownMenuItem>
@@ -60,7 +60,7 @@ export function PhoneMenu() {
           </Link>
           {GROUPS.map((g) => (
             <div key={g.key} className="mt-3">
-              <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t(g.key)}</p>
+              <p className="px-3 pb-1 text-sm font-semibold text-muted-foreground">{t(g.key)}</p>
               {g.items.map((item) => (
                 <Link key={item.key} href={item.href} className={cn("block rounded-md px-3 py-2.5 text-base hover:bg-accent", isActive(pathname, item.href) && "bg-forest-50 font-medium text-forest-900")}>
                   {t(item.key)}

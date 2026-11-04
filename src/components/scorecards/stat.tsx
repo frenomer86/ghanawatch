@@ -1,19 +1,12 @@
 import { cn } from "@/lib/utils";
 
-/** A headline number on a scorecard. */
+/** A headline figure on a scorecard: a rule above, the label, the figure in the heading face, a note below. */
 export function Stat({ label, value, sub, tone = "default" }: { label: string; value: string; sub?: string; tone?: "default" | "mining" | "alert" }) {
   return (
-    <div
-      className={cn(
-        "rounded-lg p-3",
-        tone === "mining" && "bg-laterite-100 text-laterite-700",
-        tone === "alert" && "bg-sev-elevated-tint",
-        tone === "default" && "bg-muted/60",
-      )}
-    >
-      <dt className={cn("text-xs", tone === "alert" ? "text-sev-elevated" : "text-muted-foreground")}>{label}</dt>
-      <dd className={cn("font-heading text-2xl font-semibold tabular-nums", tone === "alert" && "text-sev-elevated")}>{value}</dd>
-      {sub && <dd className="mt-0.5 text-xs text-muted-foreground">{sub}</dd>}
+    <div className={cn("border-t-2 pt-2.5", tone === "mining" ? "border-laterite-600" : tone === "alert" ? "border-sev-elevated-fill" : "border-foreground/70")}>
+      <dt className="text-[0.9375rem] text-muted-foreground">{label}</dt>
+      <dd className={cn("mt-0.5 font-heading text-[1.75rem] font-semibold leading-tight tabular-nums", tone === "alert" && "text-sev-elevated", tone === "mining" && "text-laterite-700")}>{value}</dd>
+      {sub && <dd className="mt-1 text-sm leading-snug text-muted-foreground">{sub}</dd>}
     </div>
   );
 }

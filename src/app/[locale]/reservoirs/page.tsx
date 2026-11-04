@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
-import { Droplets, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,9 +45,9 @@ async function Cards({ locale }: { locale: Locale }) {
   }
   return (
     <>
-      <ul className="mt-8 grid gap-4 md:grid-cols-2">
+      <ul className="mt-10 grid gap-x-12 gap-y-12 md:grid-cols-2">
         {cards.map((c) => (
-          <li key={c.slug} className="rounded-xl border bg-card p-5">
+          <li key={c.slug} className="border-t-2 border-foreground/70 pt-4">
             <Card c={c} day={day} />
           </li>
         ))}
@@ -70,8 +70,7 @@ function Card({ c, day }: { c: ReservoirCard; day: (iso: string) => string }) {
     <>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Droplets className="size-5 text-sky-700" aria-hidden />
+          <h2 className="text-xl">
             {c.name}
           </h2>
           <p className="text-xs text-muted-foreground">
