@@ -20,6 +20,8 @@ export const GROUPS = [
       { href: "/alerts", key: "alerts" },
       { href: "/floods", key: "floods" },
       { href: "/air", key: "air" },
+      { href: "/reservoirs", key: "reservoirs" },
+      { href: "/coast", key: "coast" },
       { href: "/power", key: "power" },
     ],
   },

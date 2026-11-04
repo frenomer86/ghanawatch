@@ -27,7 +27,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { Geometry } from "geojson";
+import type { Geometry, MultiPolygon } from "geojson";
 import {
   AUTHORITIES,
   CASE_STATUSES,
@@ -708,6 +708,65 @@ export const districtAirHeat = pgTable(
     computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.districtId, t.day] }), index("district_air_heat_day_idx").on(t.day)],
+);
+
+/**
+ * Reservoirs and lakes watched by radar (src/pipeline/adapters/reservoirs.ts): the outline is the largest
+ * extent in Digital Earth Africa Waterbodies, simplified to the radar grid; one observation per radar pass.
+ */
+export const reservoirs = pgTable("reservoirs", {
+  slug: text("slug").primaryKey(),
+  wbId: integer("wb_id").notNull(),
+  name: text("name").notNull(),
+  /** Area of the largest extent, km². */
+  areaKm2: real("area_km2").notNull(),
+  geom: jsonb("geom").$type<MultiPolygon>().notNull(),
+  bbox: jsonb("bbox").$type<[number, number, number, number]>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const reservoirObservations = pgTable(
+  "reservoir_observations",
+  {
+    slug: text("slug")
+      .notNull()
+      .references(() => reservoirs.slug, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    orbit: text("orbit").notNull(),
+    waterKm2: real("water_km2").notNull(),
+    /** Share of the largest extent under water (of the part the radar saw), %. */
+    waterPct: real("water_pct").notNull(),
+    /** Share of the largest extent the radar saw, %. */
+    observedPct: real("observed_pct").notNull(),
+    thresholdDb: real("threshold_db").notNull(),
+    scenes: integer("scenes").notNull(),
+    method: text("method").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.slug, t.date, t.orbit] }), check("reservoir_observations_orbit_ck", sql`orbit in ('ascending', 'descending')`)],
+);
+
+/**
+ * Coastline change, one point per kilometre of Ghana's shoreline (src/pipeline/adapters/coastlines.ts, from
+ * Digital Earth Africa Coastlines): rate in metres a year (negative is retreat), its significance, and the
+ * distance moved since 2000. Replaced as a whole when the source adds a year.
+ */
+export const coastPoints = pgTable(
+  "coast_points",
+  {
+    lon: numeric("lon", { precision: 8, scale: 5, mode: "number" }).notNull(),
+    lat: numeric("lat", { precision: 7, scale: 5, mode: "number" }).notNull(),
+    rateMYr: real("rate_m_yr").notNull(),
+    sig: real("sig"),
+    se: real("se"),
+    certainty: text("certainty").notNull(),
+    changeM: real("change_m"),
+    latestYear: integer("latest_year"),
+    place: text("place"),
+    districtId: uuid("district_id").references(() => adminBoundaries.id, { onDelete: "set null" }),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.lon, t.lat] })],
 );
 
 /**

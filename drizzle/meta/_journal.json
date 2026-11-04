@@ -134,6 +134,20 @@
       "when": 1793815000000,
       "tag": "0018_air_heat",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793816000000,
+      "tag": "0019_reservoirs",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793817000000,
+      "tag": "0020_coast",
+      "breakpoints": true
     }
   ]
 }
