@@ -20,6 +20,7 @@ import { seedSources } from "./seed/sources";
 import { forestLossAdapter } from "./adapters/forest-loss";
 import { gfwAlertsAdapter } from "./adapters/gfw-alerts";
 import { rainForecastAdapter } from "./adapters/rain-forecast";
+import { airHeatAdapter } from "./adapters/air-heat";
 import { newsSignalsAdapter } from "./adapters/news-signals";
 import { maxSeverity } from "@/lib/domain/format";
 import { ContextIndex, isSensitive } from "./context/annotate";
@@ -38,7 +39,7 @@ import { markLicensed } from "./context/licensed";
  * provider failing never blocks the others; every outcome is written to
  * pipeline_runs where the Data Sources page and /api/v1/freshness read it.
  */
-const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, radarFloodAdapter, forestLossAdapter];
+const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, airHeatAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, radarFloodAdapter, forestLossAdapter];
 
 async function main() {
   loadEnv({ path: ".env.local" });

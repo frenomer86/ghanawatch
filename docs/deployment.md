@@ -8,7 +8,7 @@ GhanaWatch is a live system: a web server, a PostGIS database and a data job tha
 |---|---|
 | `db` | PostgreSQL 16 + PostGIS 3.4, data on a Docker volume, not exposed to the internet |
 | `web` | The Next.js site and `/api/v1`, port 3000 inside the server |
-| `pipeline` | Every 3 hours: the national Sentinel-2 galamsey scan and Sentinel-1 radar (a time budget per run, continuing where it stopped), forest-loss alerts, fires, river flood forecasts, the 3-day rain forecast for every district, and the news-signal reader that queues satellite re-checks. Then the confidence rules, licensed-mine marking, waterway tagging and the 72-hour hotspots |
+| `pipeline` | Every 3 hours: the national Sentinel-2 galamsey scan and Sentinel-1 radar (a time budget per run, continuing where it stopped), forest-loss alerts, fires, river flood forecasts, the 3-day rain forecast, air quality and heat for every district, and the news-signal reader that queues satellite re-checks. Then the confidence rules, licensed-mine marking, waterway tagging and the 72-hour hotspots |
 | `scheduler` | The monthly release on the first Monday at 06:00 GMT (dry run the Wednesday before) and the weekly digest on Mondays at 07:00 GMT; writes `public/releases` and `public/alerts` on volumes the website serves |
 | `reviewer` | Checks every new citizen report within a minute, with no moderator: photo safety screen, faces blurred, then published or rejected on the evidence; reports with nothing to confirm them yet are checked again with each satellite pass for 30 days (`docs/report-automation.md`). Downloads its 88.5 MB photo safety model once, onto the `uploads` volume |
 | `caddy` | HTTPS on ports 80/443 with automatic Let's Encrypt certificates |

@@ -683,6 +683,34 @@ export const districtRain = pgTable(
 );
 
 /**
+ * Air quality and heat for every district and day (src/lib/domain/air-heat.ts): CAMS forecasts of fine
+ * particles, coarse particles and Saharan dust with the US AQI, and the day's highest temperature, feels-like
+ * temperature and wet-bulb temperature, all from Open-Meteo at the district centre. Past days are kept as a
+ * record; future days are replaced by each new forecast.
+ */
+export const districtAirHeat = pgTable(
+  "district_air_heat",
+  {
+    districtId: uuid("district_id")
+      .notNull()
+      .references(() => adminBoundaries.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    /** 24-hour mean PM2.5 and PM10, µg/m³. */
+    pm25: real("pm25"),
+    pm10: real("pm10"),
+    /** Highest hourly dust concentration, µg/m³. */
+    dust: real("dust"),
+    /** Highest hourly US Air Quality Index. */
+    aqi: integer("aqi"),
+    tempMaxC: real("temp_max_c"),
+    feelsLikeMaxC: real("feels_like_max_c"),
+    wetBulbMaxC: real("wet_bulb_max_c"),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.districtId, t.day] }), index("district_air_heat_day_idx").on(t.day)],
+);
+
+/**
  * Rivers watched by radar for dredgers and floating mining platforms (Pra,
  * Ankobra, Offin, Birim, Tano), and the bridges, dams and weirs on them that
  * reflect radar the same way and must be ignored. From OpenStreetMap.

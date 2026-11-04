@@ -225,6 +225,21 @@ export const SOURCE_REGISTRY: SourceDef[] = [
     connection: "live",
   },
   {
+    slug: "open-meteo-air",
+    name: "Air quality and heat forecasts",
+    provider: "Copernicus Atmosphere Monitoring Service (CAMS) and Open-Meteo",
+    url: "https://open-meteo.com/en/docs/air-quality-api",
+    docUrl: "https://open-meteo.com/en/docs/air-quality-api",
+    category: "weather",
+    description:
+      "Fine particles (PM2.5), coarse particles (PM10), Saharan dust and the US Air Quality Index from the CAMS global forecast (about 45 km), and the day's highest temperature, feels-like temperature and wet-bulb temperature, for every district from yesterday to three days ahead. Model forecasts for the district centre, not measurements.",
+    licence: "CAMS data: Copernicus licence (free, attribution required); Open-Meteo: Creative Commons Attribution 4.0 (CC BY 4.0)",
+    attributionText: "Generated using Copernicus Atmosphere Monitoring Service information; weather data by Open-Meteo.com",
+    cadence: "Every 3 hours",
+    resolutionM: 45000,
+    connection: "live",
+  },
+  {
     slug: "dea-wofs",
     name: "Water Observations from Space (WOfS) for Africa",
     provider: "Digital Earth Africa",

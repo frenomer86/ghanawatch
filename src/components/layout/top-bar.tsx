@@ -19,6 +19,7 @@ export const GROUPS = [
       { href: "/monthly", key: "reports" },
       { href: "/alerts", key: "alerts" },
       { href: "/floods", key: "floods" },
+      { href: "/air", key: "air" },
       { href: "/power", key: "power" },
     ],
   },
