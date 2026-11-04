@@ -103,14 +103,50 @@ async function overpass(query: string, fetchText: (url: string, init?: RequestIn
   return (JSON.parse(text) as { elements: OsmElement[] }).elements ?? [];
 }
 
+/**
+ * Join the outer ways of a multipolygon relation into closed rings (OSM ways share their end nodes) (pure;
+ * exported for tests). A large forest reserve's boundary is often drawn as many ways; taking one of them alone
+ * gives a sliver closed by a straight line.
+ */
+export function stitchRings(parts: number[][][]): number[][][] {
+  const key = (p: number[]) => `${p[0]},${p[1]}`;
+  const left = parts.filter((p) => p.length >= 2).map((p) => [...p]);
+  const rings: number[][][] = [];
+  while (left.length) {
+    const ring = left.shift()!;
+    let grown = true;
+    while (key(ring[0]) !== key(ring[ring.length - 1]) && grown) {
+      grown = false;
+      const end = key(ring[ring.length - 1]);
+      for (let i = 0; i < left.length; i++) {
+        const w = left[i];
+        if (key(w[0]) === end) ring.push(...w.slice(1));
+        else if (key(w[w.length - 1]) === end) ring.push(...[...w].reverse().slice(1));
+        else continue;
+        left.splice(i, 1);
+        grown = true;
+        break;
+      }
+    }
+    rings.push(ring);
+  }
+  return rings;
+}
+
+const ringArea = (r: number[][]) => {
+  let a = 0;
+  for (let i = 1; i < r.length; i++) a += r[i - 1][0] * r[i][1] - r[i][0] * r[i - 1][1];
+  return Math.abs(a) / 2;
+};
+
 function outline(e: OsmElement): Polygon | null {
   const ring = (pts: Array<{ lat: number; lon: number } | null> | undefined) =>
     (pts ?? []).filter((p): p is { lat: number; lon: number } => !!p).map((p) => [p.lon, p.lat]);
   let coords = ring(e.geometry);
   if (!coords.length && e.members) {
-    // Largest outer member of a multipolygon relation.
-    const outers = e.members.filter((m) => m.role === "outer").map((m) => ring(m.geometry));
-    coords = outers.sort((a, b) => b.length - a.length)[0] ?? [];
+    // The largest closed ring of a multipolygon relation's outer ways.
+    const rings = stitchRings(e.members.filter((m) => m.role === "outer").map((m) => ring(m.geometry)));
+    coords = rings.sort((a, b) => ringArea(b) - ringArea(a))[0] ?? [];
   }
   if (coords.length < 4) return null;
   const [fx, fy] = coords[0];

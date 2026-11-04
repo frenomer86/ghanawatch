@@ -2,6 +2,7 @@ import { asc, desc, eq, isNull, lt, or } from "drizzle-orm";
 import type { Polygon } from "geojson";
 import { alertCells, analysisCells } from "@/lib/db/schema";
 import { lonLatToTile, tilePixelM, tileToLonLat } from "@/lib/server/land/plot";
+import { corridor, edgeShare, fmtLength as km, isRoadShape, patchShape, ROAD_MAX_EDGE_SHARE } from "../tracks/shape";
 import type { Adapter, NormalisedEvent } from "./types";
 
 /**
@@ -17,6 +18,16 @@ import type { Adapter, NormalisedEvent } from "./types";
  * least MIN_HA become vegetation-loss detections. High-confidence patches are
  * "high" confidence here; single-system patches are "low" and hidden from the
  * default views.
+ *
+ * A patch shaped like a track (src/pipeline/tracks/shape.ts) becomes a "new road"
+ * detection, whatever its area: a fresh track cut into forest is often the first
+ * sign of galamsey or logging, before any pit appears. Its outline is a narrow
+ * corridor along the track's centre line rather than the patch's box, and
+ * src/pipeline/context/roads.ts then ties it to the forest reserve it enters or
+ * approaches. A pit or farm that grows adds a thin strip of new alerts along
+ * its edge, which has the same shape; a strip lying mostly against tree cover
+ * lost earlier (older alerts in the same layer) is that, and is not taken for a
+ * track.
  */
 const SLUG = "gfw-integrated-alerts";
 const METHOD = "gfw-integrated-1.0";
@@ -50,7 +61,7 @@ export const gfwAlertsAdapter: Adapter = {
       if (Date.now() - started > budgetMs) break;
       try {
         const { patches, tiles } = await scanCell([c.minLon, c.minLat, c.maxLon, c.maxLat], since);
-        const evs = patches.filter((p) => p.areaHa >= MIN_HA).map((p) => toEvent(p, ctx.now));
+        const evs = patches.filter((p) => p.areaHa >= MIN_HA || p.road).map((p) => toEvent(p, ctx.now));
         if (ctx.emit) await ctx.emit(evs);
         else events.push(...evs);
         await db
@@ -77,6 +88,8 @@ export interface AlertPatch {
   first: string;
   last: string;
   bbox: [number, number, number, number];
+  /** Set when the patch is shaped like a track: its length, width and centre line (lon, lat). */
+  road?: { lengthM: number; widthM: number; line: Array<[number, number]> };
 }
 
 async function scanCell(bbox: [number, number, number, number], since: number): Promise<{ patches: AlertPatch[]; tiles: number }> {
@@ -95,7 +108,11 @@ async function scanCell(bbox: [number, number, number, number], since: number): 
   return { patches, tiles: jobs.length };
 }
 
-/** Per pixel: 0 none, else day index (days since EPOCH) and confidence, packed as day * 4 + confidence. */
+/**
+ * Per pixel: 0 none; -1 tree cover lost before `since` (an older alert, kept to tell a new track from the new edge of
+ * an old clearing); else the day index (days since EPOCH) and confidence, packed as day * 4 + confidence. Null when
+ * the tile has no alert since `since`.
+ */
 async function readTile(x: number, y: number, since: number): Promise<Int32Array | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -110,7 +127,11 @@ async function readTile(x: number, y: number, since: number): Promise<Int32Array
         const o = p * 4;
         if (!data[o + 3]) continue;
         const day = data[o] * 255 + data[o + 1];
-        if (day <= 0 || EPOCH + day * 86_400_000 < since) continue;
+        if (day <= 0) continue;
+        if (EPOCH + day * 86_400_000 < since) {
+          out[p] = -1;
+          continue;
+        }
         out[p] = day * 4 + Math.max(1, Math.min(3, Math.floor(data[o + 2] / 100)));
         any = true;
       }
@@ -123,15 +144,17 @@ async function readTile(x: number, y: number, since: number): Promise<Int32Array
   return null;
 }
 
-/** 8-connected patches of alert pixels in one tile (pure; exported for tests). */
+/** 8-connected patches of new alert pixels in one tile (pure; exported for tests). */
 export function patchesInTile(grid: Int32Array, tx: number, ty: number): AlertPatch[] {
   const seen = new Uint8Array(grid.length);
   const out: AlertPatch[] = [];
   const stack: number[] = [];
   for (let s = 0; s < grid.length; s++) {
-    if (!grid[s] || seen[s]) continue;
+    if (grid[s] <= 0 || seen[s]) continue;
     seen[s] = 1;
     stack.push(s);
+    const pc: number[] = [];
+    const pr: number[] = [];
     let n = 0;
     let high = 0;
     let sx = 0;
@@ -146,6 +169,8 @@ export function patchesInTile(grid: Int32Array, tx: number, ty: number): AlertPa
       const p = stack.pop()!;
       const col = p % 256;
       const row = (p - col) / 256;
+      pc.push(col);
+      pr.push(row);
       const day = Math.floor(grid[p] / 4);
       if (grid[p] % 4 >= 2) high++;
       n++;
@@ -163,7 +188,7 @@ export function patchesInTile(grid: Int32Array, tx: number, ty: number): AlertPa
           const rr = row + dy;
           if (cc < 0 || rr < 0 || cc > 255 || rr > 255) continue;
           const q = rr * 256 + cc;
-          if (!grid[q] || seen[q]) continue;
+          if (grid[q] <= 0 || seen[q]) continue;
           seen[q] = 1;
           stack.push(q);
         }
@@ -174,12 +199,27 @@ export function patchesInTile(grid: Int32Array, tx: number, ty: number): AlertPa
     const se = tileToLonLat(tx + (c1 + 1) / 256, ty + (r1 + 1) / 256, Z);
     const pxHa = tilePixelM(Z, 256, centre.lat) ** 2 / 10_000;
     const iso = (d: number) => new Date(EPOCH + d * 86_400_000).toISOString().slice(0, 10);
-    out.push({ lon: centre.lon, lat: centre.lat, areaHa: n * pxHa, pixels: n, high, first: iso(dMin), last: iso(dMax), bbox: [nw.lon, se.lat, se.lon, nw.lat] });
+    const patch: AlertPatch = { lon: centre.lon, lat: centre.lat, areaHa: n * pxHa, pixels: n, high, first: iso(dMin), last: iso(dMax), bbox: [nw.lon, se.lat, se.lon, nw.lat] };
+    if (n >= 15) {
+      const pxM = tilePixelM(Z, 256, centre.lat);
+      const sh = patchShape(pc, pr);
+      const lengthM = sh.lengthPx * pxM;
+      const widthM = sh.widthPx * pxM;
+      if (isRoadShape(lengthM, widthM) && edgeShare((i) => grid[i] < 0, 256, 256, pc, pr) <= ROAD_MAX_EDGE_SHARE) {
+        const line = sh.line.map(([c, r]) => {
+          const ll = tileToLonLat(tx + c / 256, ty + r / 256, Z);
+          return [Math.round(ll.lon * 1e6) / 1e6, Math.round(ll.lat * 1e6) / 1e6] as [number, number];
+        });
+        patch.road = { lengthM: Math.round(lengthM), widthM: Math.round(widthM), line };
+      }
+    }
+    out.push(patch);
   }
   return out;
 }
 
 function toEvent(p: AlertPatch, now: Date): NormalisedEvent {
+  if (p.road) return roadEvent(p, p.road, now);
   const confirmed = p.high / p.pixels >= 0.5;
   const ha = Math.round(p.areaHa * 100) / 100;
   const sourceEventId = `ia-${p.lon.toFixed(4)}-${p.lat.toFixed(4)}`;
@@ -205,5 +245,28 @@ function toEvent(p: AlertPatch, now: Date): NormalisedEvent {
     } Clearing for mining, farms, plantations, roads or fire all show up this way; check the satellite views before acting.`,
     methodVersion: METHOD,
     properties: { alertPixels: p.pixels, highConfidencePixels: p.high, firstAlert: p.first, lastAlert: p.last, zoom: Z },
+  };
+}
+
+function roadEvent(p: AlertPatch, road: NonNullable<AlertPatch["road"]>, now: Date): NormalisedEvent {
+  const confirmed = p.high / p.pixels >= 0.5;
+  return {
+    sourceSlug: SLUG,
+    sourceEventId: `road-${p.lon.toFixed(4)}-${p.lat.toFixed(4)}`,
+    type: "vegetation_loss",
+    detectedAt: now,
+    imageDate: p.first,
+    imageDateEnd: p.last,
+    confidence: confirmed ? "high" : "low",
+    confidenceScore: confirmed ? 0.85 : 0.5,
+    severity: "watch",
+    areaHa: Math.round(p.areaHa * 100) / 100,
+    geom: corridor(road.line, Math.max(8, road.widthM / 2)),
+    titleEn: `New track cut through forest, about ${km(road.lengthM)}`,
+    descriptionEn: `A line of tree cover about ${km(road.lengthM)} long and ${road.widthM} m wide was cleared here between ${p.first} and ${p.last}, according to Global Forest Watch's integrated deforestation alerts (Landsat, Sentinel-2 and Sentinel-1 radar). Its shape is that of a track or road. New tracks into forest often come before mining pits or logging; check the satellite views and the forest reserve it leads to. ${
+      confirmed ? "Most of it is high confidence, confirmed by repeated observations or by more than one system." : "It is low confidence so far (seen by one system once)."
+    }`,
+    methodVersion: METHOD,
+    properties: { signature: "new_road", lengthM: road.lengthM, widthM: road.widthM, line: road.line, alertPixels: p.pixels, highConfidencePixels: p.high, firstAlert: p.first, lastAlert: p.last, zoom: Z },
   };
 }

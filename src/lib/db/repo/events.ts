@@ -40,7 +40,13 @@ export function toSummary(r: Row, locale: Locale = "en"): ChangeEventSummary {
       ...((e.properties as { licensedMine?: string } | null)?.licensedMine ? [`Inside a licensed mine: ${(e.properties as { licensedMine: string }).licensedMine}`] : []),
       ...((e.properties as { placement?: { flags?: string[] } } | null)?.placement?.flags ?? []),
     ].slice(0, 4),
+    track: trackOf(e.properties),
   };
+}
+
+function trackOf(p: Record<string, unknown> | null): ChangeEventSummary["track"] {
+  if (p?.signature !== "new_road" || typeof p.lengthM !== "number") return null;
+  return { lengthM: p.lengthM, widthM: Number(p.widthM ?? 0) };
 }
 
 function baseSelect(db: Awaited<ReturnType<typeof getDb>>) {
@@ -155,12 +161,22 @@ function publicDescription(e: typeof changeEvents.$inferSelect): string {
     case "water_change":
       return `Satellite images show new or changed water here${ha} ${when}, such as new ponds or a river turning muddy. ${check}`;
     case "vegetation_loss":
+      if (e.properties?.signature === "new_road") return trackDescription(e, when, check);
       return `Tree cover was lost here${ha} ${when}. Clearing for mining, farms, roads or fire all look like this from space. ${check}`;
     case "fire":
       return `A fire was seen here by satellite ${when}. The cause cannot be told from space; most are bush, farm or waste fires.`;
     default:
       return e.descriptionEn;
   }
+}
+
+/** A new track into forest (src/pipeline/context/roads.ts): its length, and the reserve it enters or approaches. */
+function trackDescription(e: typeof changeEvents.$inferSelect, when: string, check: string): string {
+  const p = (e.properties ?? {}) as { lengthM?: number; roadContext?: { reserve: string | null; inside: boolean; distanceM: number | null } };
+  const len = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m / 10) * 10} m`);
+  const ctx = p.roadContext;
+  const where = ctx?.reserve ? (ctx.inside ? `, inside ${ctx.reserve}` : `, ${len(ctx.distanceM ?? 0)} from the edge of ${ctx.reserve}`) : "";
+  return `A new track${p.lengthM ? ` about ${len(p.lengthM)} long` : ""} was cut through forest here${where}, seen ${when}. New tracks into forest often come before mining pits or logging; a line of clearing for pits can look the same from space. ${check}`;
 }
 
 export async function getEvent(id: string, locale: Locale = "en"): Promise<ChangeEventDetail | null> {

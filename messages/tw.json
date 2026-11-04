@@ -94,6 +94,8 @@
     "seenBySatellite": "Satellite hunuu no",
     "detected": "Wɔhunuu",
     "area": "Kɛseɛ",
+    "trackLength": "Ne tenten",
+    "trackSize": "{length} tenten, bɛyɛ {width} m trɛw",
     "district": "Ɔmansin",
     "region": "Mantam",
     "source": "Fibea",

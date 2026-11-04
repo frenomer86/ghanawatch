@@ -26,7 +26,7 @@ export default async function HowItWorksPage({ params }: PageProps<"/[locale]/ho
     {
       Icon: ScanSearch,
       title: "New images are compared with the past",
-      body: "Where trees disappear, ground opens up, new ponds appear, a river turns muddy or a fire burns, the change is flagged with the date it was seen and how sure we are.",
+      body: "Where trees disappear, ground opens up, a new track is cut into a forest reserve, new ponds appear, a river turns muddy or a fire burns, the change is flagged with the date it was seen and how sure we are.",
     },
     {
       Icon: MapPinned,
@@ -36,7 +36,7 @@ export default async function HowItWorksPage({ params }: PageProps<"/[locale]/ho
     {
       Icon: BellRing,
       title: "People check, share and report back",
-      body: "Anyone can watch a district, share a detection or send a photo from the ground. Reports are reviewed by moderators. The platform is a watch tool, not a judge of what is lawful.",
+      body: "Anyone can watch a district, share a detection or send a photo from the ground. Reports are checked automatically against the photo's own location and the satellite record, and a moderator can step in. The platform is a watch tool, not a judge of what is lawful.",
     },
   ];
 

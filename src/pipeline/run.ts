@@ -18,6 +18,7 @@ import { timeseriesAdapter } from "./adapters/timeseries";
 import { radarFloodAdapter } from "./adapters/radar-flood";
 import { seedSources } from "./seed/sources";
 import { forestLossAdapter } from "./adapters/forest-loss";
+import { forestTracksAdapter } from "./adapters/forest-tracks";
 import { gfwAlertsAdapter } from "./adapters/gfw-alerts";
 import { rainForecastAdapter } from "./adapters/rain-forecast";
 import { airHeatAdapter } from "./adapters/air-heat";
@@ -28,6 +29,7 @@ import { maxSeverity } from "@/lib/domain/format";
 import { ContextIndex, isSensitive } from "./context/annotate";
 import { districtFor, loadDistricts, type DistrictShape } from "./districts";
 import { tagWaterways } from "./context/waterways";
+import { tagRoads } from "./context/roads";
 import { markLicensed } from "./context/licensed";
 
 /**
@@ -41,7 +43,7 @@ import { markLicensed } from "./context/licensed";
  * provider failing never blocks the others; every outcome is written to
  * pipeline_runs where the Data Sources page and /api/v1/freshness read it.
  */
-const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, airHeatAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, radarFloodAdapter, reservoirsAdapter, coastlinesAdapter, forestLossAdapter];
+const ADAPTERS: Adapter[] = [gfwAlertsAdapter, firmsAdapter, firmsArchiveAdapter, glofasAdapter, rainForecastAdapter, airHeatAdapter, newsSignalsAdapter, sentinel2Adapter, timeseriesAdapter, sentinel1Adapter, radarFloodAdapter, reservoirsAdapter, coastlinesAdapter, forestLossAdapter, forestTracksAdapter];
 
 async function main() {
   loadEnv({ path: ".env.local" });
@@ -143,6 +145,8 @@ async function runOnce() {
   if (c) log(`corroboration: ${c} galamsey detections confirmed by a second, independent source`);
   const g = await forestAlertCheck(db);
   log(`forest alerts: ${g.shown} shown (a Sentinel-2 or radar detection nearby), ${g.possible} kept as possible`);
+  const roads = await tagRoads(db);
+  log(`new roads: ${roads.inside} inside forest reserves, ${roads.approaching} within 1 km of one, ${roads.elsewhere} elsewhere in forest`);
   const u = await urgentClusters(db);
   const lic = await markLicensed(db);
   log(`licensed mines: ${lic.marked} detections newly marked inside a mapped licensed mine, ${lic.cleared} unmarked`);
@@ -284,7 +288,8 @@ async function forestAlertCheck(db: Db): Promise<{ shown: number; possible: numb
       confidence = 'low',
       properties = coalesce(e.properties, '{}'::jsonb) || jsonb_build_object('gfwConfidence', 'high',
         'contextDowngrade', 'forest-loss alert not yet confirmed by our own Sentinel-2 or radar scan')
-    where e.method_version like 'gfw-integrated-%' and e.status <> 'dismissed' and e.confidence = 'high' and not ${near}`);
+    where e.method_version like 'gfw-integrated-%' and e.status <> 'dismissed' and e.confidence = 'high' and not ${near}
+      and coalesce(e.properties->>'signature', '') <> 'new_road'`);
   await db.execute(sql`
     update change_events e set
       confidence = 'high',

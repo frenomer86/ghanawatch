@@ -7,6 +7,7 @@ import { ChevronRight, ScanEye } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { reserveBySlug, scorecards } from "@/lib/db/repo/scorecards";
+import { reserveRoads } from "@/lib/db/repo/roads";
 import { slugify } from "@/lib/domain/scorecards";
 import { groundViewHref } from "@/lib/explore/imagery";
 import { env } from "@/lib/server/env";
@@ -17,6 +18,8 @@ import { Stat, fmtHa } from "@/components/scorecards/stat";
 import { SeverityBadge } from "@/components/domain/severity-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/reserves/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -53,6 +56,7 @@ async function Reserve({ params }: { params: PageProps<"/[locale]/reserves/[slug
   if (!r) notFound();
   const all = await scorecards();
   const c = r.card;
+  const roads = await reserveRoads(c.name).catch(() => null);
   const url = `${env().PUBLIC_ORIGIN}/reserves/${c.slug}`;
   const rank = all.reserves.findIndex((x) => x.slug === c.slug) + 1;
   return (
@@ -80,12 +84,39 @@ async function Reserve({ params }: { params: PageProps<"/[locale]/reserves/[slug
           ))}
         </p>
       )}
-      <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
         <Stat tone="mining" label="Likely mining inside" value={`${fmtHa(c.miningHa)} ha`} sub={`${c.miningSites} sites`} />
         <Stat label="Cleared to bare ground" value={`${fmtHa(c.clearedHa)} ha`} sub="could also be farms" />
         <Stat tone="alert" label="Sites near people" value={String(c.nearPeople)} sub="within 300 m of homes, schools or clinics" />
         <Stat label="Rank among reserves" value={`${rank} of ${all.reserves.length}`} sub="by area affected" />
+        <Stat
+          tone={roads && roads.insideReserves > 0 ? "alert" : undefined}
+          label="New tracks into the reserve"
+          value={roads ? String(roads.insideReserves) : "–"}
+          sub={roads && roads.count ? `${roads.km} km in the last 90 days, ${roads.count - roads.insideReserves} more within 1 km of its edge` : "none seen in the last 90 days"}
+        />
       </dl>
+      {roads && roads.count > 0 && (
+        <section className="mt-8" aria-labelledby="roads-h">
+          <h2 id="roads-h" className="text-xl">
+            New tracks into the reserve
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-[0.9375rem] text-muted-foreground">
+            Lines of forest newly cleared in the shape of a track, found by GhanaWatch&rsquo;s 10 m Sentinel-2 scan of the reserves, inside
+            the reserve or within 1 km of its edge. New tracks often come before pits and logging.
+          </p>
+          <ul className="mt-3 divide-y border-y">
+            {roads.roads.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5">
+                <Link href={`/event/${x.id}`} className="font-medium text-link underline-offset-2 hover:underline">
+                  {x.title}
+                </Link>
+                <span className="text-sm text-muted-foreground">seen {fmtDay(x.firstSeen)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {r.sites.length > 0 && (
         <section className="mt-8" aria-labelledby="sites-h">
           <h2 id="sites-h" className="text-xl font-semibold">

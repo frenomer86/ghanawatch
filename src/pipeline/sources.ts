@@ -106,6 +106,21 @@ export const SOURCE_REGISTRY: SourceDef[] = [
     connection: "live",
   },
   {
+    slug: "s2-forest-tracks",
+    name: "New tracks into forest reserves",
+    provider: "GhanaWatch (Copernicus Sentinel-2 via Element84 Earth Search)",
+    url: "https://dataspace.copernicus.eu/explore-data/data-collections/sentinel-data/sentinel-2",
+    docUrl: "https://earth-search.aws.element84.com/v1",
+    category: "alerts",
+    description:
+      "GhanaWatch's own scan of the forest reserves and other protected areas, and a 2 km band around them, at Sentinel-2's full 10 m resolution: the clearest scenes of the last 120 days are compared with the clearest one to two years earlier, and a long, narrow line of newly bare ground through forest that stood (at least 250 m long, at most 35 m wide, not the growing edge of an older clearing and not a line of water-filled pits) is reported as a new track. Each area is scanned again every 30 days.",
+    licence: "Copernicus Sentinel data terms (free, full and open)",
+    attributionText: "Contains modified Copernicus Sentinel data, processed by GhanaWatch",
+    cadence: "Each forest reserve every 30 days",
+    resolutionM: 10,
+    connection: "live",
+  },
+  {
     slug: "gfw-integrated-alerts",
     name: "Global Forest Watch alerts",
     provider: "Global Forest Watch (World Resources Institute)",

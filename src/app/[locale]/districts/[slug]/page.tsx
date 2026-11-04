@@ -12,6 +12,7 @@ import { districtAirHeat } from "@/lib/db/repo/air-heat";
 import { reservoirsInDistrict } from "@/lib/db/repo/reservoirs";
 import { districtCoast } from "@/lib/db/repo/coast";
 import { districtPower } from "@/lib/db/repo/power";
+import { districtRoads } from "@/lib/db/repo/roads";
 import { DistrictMap } from "@/components/maps/district-map";
 import { AQI_TEXT, HEAT_TEXT } from "@/lib/domain/air-heat";
 import { shareOfArea } from "@/lib/domain/scorecards";
@@ -76,7 +77,7 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
   const d = await districtBySlug(slug);
   if (!d) notFound();
   const c = d.card;
-  const [rain, series, intakes, airHeat, waters, coast, power] = await Promise.all([
+  const [rain, series, intakes, airHeat, waters, coast, power, roads] = await Promise.all([
     districtRainOutlook(c.id),
     districtSeries(c.id),
     listIntakes(),
@@ -86,6 +87,7 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
     districtPower()
       .then((all) => all.find((p) => p.districtId === c.id) ?? null)
       .catch(() => null),
+    districtRoads(c.id).catch(() => null),
   ]);
   const airToday = airHeat?.days[0] ?? null;
   const worstAirDay = airHeat?.days.reduce<(typeof airHeat.days)[number] | null>((w, d) => (d.aqi != null && (w?.aqi == null || d.aqi > w.aqi) ? d : w), null) ?? null;
@@ -166,6 +168,16 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
         <Stat tone="alert" label="Near homes, schools, clinics" value={String(c.nearPeople)} sub="sites within 300 m or inside residential areas" />
         <Stat label="Rivers turned muddy" value={String(c.muddyRivers)} sub={c.muddyRivers ? `${fmtHa(c.muddyRiversHa)} ha of water` : "none seen"} />
         <Stat label="Seen by radar through cloud" value={`${fmtHa(c.radarHa)} ha`} sub={`${c.radarSites} new ponds`} />
+        <Stat
+          tone={roads && roads.insideReserves > 0 ? "alert" : undefined}
+          label="New tracks into forest"
+          value={roads ? String(roads.count) : "–"}
+          sub={
+            roads && roads.count
+              ? `${roads.km} km in the last 90 days${roads.insideReserves ? `; ${roads.insideReserves} inside forest reserves` : ""}`
+              : "none seen in the last 90 days"
+          }
+        />
         <Stat label="Fires" value={String(c.fires7d)} sub={firesText(c.fires7d, c.firesUsual7d).replace(/^\d+ /, "")} />
         <Stat
           tone={rain && rain.maxMm >= RAIN_LEVELS.heavy ? "alert" : undefined}

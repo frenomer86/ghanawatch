@@ -15,6 +15,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -944,6 +945,19 @@ export const alertCells = pgTable("alert_cells", {
   lastRunAt: timestamp("last_run_at", { withTimezone: true }).notNull(),
   alerts: integer("alerts").notNull().default(0),
   tiles: integer("tiles").notNull().default(0),
+});
+
+/** Boxes of the 10 m Sentinel-2 scan for new tracks into forest reserves (src/pipeline/adapters/forest-tracks.ts). */
+export const trackBoxes = pgTable("track_boxes", {
+  boxId: text("box_id").primaryKey(),
+  minLon: doublePrecision("min_lon").notNull(),
+  minLat: doublePrecision("min_lat").notNull(),
+  maxLon: doublePrecision("max_lon").notNull(),
+  maxLat: doublePrecision("max_lat").notNull(),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  tracks: integer("tracks").notNull().default(0),
+  recentScenes: integer("recent_scenes").notNull().default(0),
+  clearShare: real("clear_share"),
 });
 
 // ---------------------------------------------------------------------------

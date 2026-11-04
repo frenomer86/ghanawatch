@@ -128,6 +128,7 @@ No data source needs a key, account or email. The only external services are pub
 | `S1_BUDGET_MINUTES`, `S1_MAX_SCENES`, `S1_MAX_CELLS` | no | Radar run limits per pipeline run (defaults 30 minutes, 2 river passes, 40 cloudy cells; the run stops at the time budget) |
 | `S2_BUDGET_MINUTES`, `S2_CONCURRENCY` | no | Galamsey scan time limit and parallel cells per pipeline run (defaults 40 minutes, 2). `S2_MIN_AFTER_OBS` is set to 1 in `docker-compose.yml` (the rule measured on 18 Oct 2026) |
 | `GFW_ALERTS_BUDGET_MINUTES` | no | Time limit for the forest-loss alert reader (default 30 minutes) |
+| `GW_TRACKS_BUDGET_MINUTES` | no | Time limit per day for the 10 m scan of forest reserves for new tracks (default 45 minutes; see docs/new-tracks.md) |
 | `RATE_LIMIT_*` | no | Public API, reports, machinery tags (`RATE_LIMIT_SIGHTINGS_PER_HOUR`, default 30) and login limits |
 | `BREVO_API_KEY`, `MAIL_FROM` | no | Brevo transactional email for the weekly digest and subscription confirmations; without it the email sign-up form says alerts are not available yet (the WhatsApp text, RSS and JSON feeds still work) |
 | `WHATSAPP_CHANNEL_URL` | no | The channel link shown on `/alerts`; the post text is written to `public/alerts/latest.txt` every Monday |

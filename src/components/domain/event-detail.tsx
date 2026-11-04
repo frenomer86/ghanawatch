@@ -16,6 +16,8 @@ import { DateStamp } from "./date-stamp";
 import { SatelliteViews } from "./satellite-views";
 import { cn } from "@/lib/utils";
 
+const fmtLength = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m / 10) * 10} m`);
+
 /**
  * Full detection record. Used inside the map rail, the mobile sheet and the
  * stand-alone /event/[id] page so the three never drift apart.
@@ -102,10 +104,17 @@ export function EventDetail({ event, className, showOpenFull = false }: { event:
       )}
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <div>
-          <dt className="text-muted-foreground">{t("area")}</dt>
-          <dd className="font-medium tabular-nums">{formatHectares(event.areaHa)}</dd>
-        </div>
+        {event.track ? (
+          <div>
+            <dt className="text-muted-foreground">{t("trackLength")}</dt>
+            <dd className="font-medium tabular-nums">{t("trackSize", { length: fmtLength(event.track.lengthM), width: event.track.widthM })}</dd>
+          </div>
+        ) : (
+          <div>
+            <dt className="text-muted-foreground">{t("area")}</dt>
+            <dd className="font-medium tabular-nums">{formatHectares(event.areaHa)}</dd>
+          </div>
+        )}
         <div>
           <dt className="text-muted-foreground">{tConf("label")}</dt>
           <dd className="font-medium">{tConf(event.confidence)}</dd>

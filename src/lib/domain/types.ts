@@ -109,6 +109,8 @@ export interface ChangeEventSummary {
   status: EventStatus;
   /** Where it is: inside a reserve or residential area, distance to a school, etc. */
   flags: string[];
+  /** For a new track cut into forest: its length and width, metres. */
+  track?: { lengthM: number; widthM: number } | null;
 }
 
 export interface ImageReference {

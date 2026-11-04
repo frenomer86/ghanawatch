@@ -110,6 +110,8 @@
     "seenBySatellite": "Seen by satellite",
     "detected": "Detected",
     "area": "Area",
+    "trackLength": "Length",
+    "trackSize": "{length} long, about {width} m wide",
     "hectares": "{value} ha",
     "district": "District",
     "region": "Region",
