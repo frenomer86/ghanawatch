@@ -262,19 +262,6 @@ export function searchParamsToObject(sp: URLSearchParams): Record<string, string
   return out;
 }
 
-/** A power-cut report: lights went off or came back, here, a little while ago. */
-export const powerBody = z
-  .object({
-    kind: z.enum(["off", "on"]),
-    lat: lat.refine((v) => v >= GHANA_BBOX[1] && v <= GHANA_BBOX[3], "location must be within Ghana"),
-    lon: lon.refine((v) => v >= GHANA_BBOX[0] && v <= GHANA_BBOX[2], "location must be within Ghana"),
-    minutesAgo: z.coerce.number().int().min(0).max(12 * 60).default(0),
-  })
-  .strict();
-export type PowerBody = z.infer<typeof powerBody>;
-
-export const powerQuery = z.object({ hours: z.coerce.number().int().min(1).max(24 * 7).default(24) }).strict();
-
 // ---------------------------------------------------------------------------
 // The monthly index, alerts and the credibility tables
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
 import { Droplets, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
+import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { reservoirCards, type ReservoirCard } from "@/lib/db/repo/reservoirs";
@@ -22,6 +23,9 @@ export default async function ReservoirsPage({ params }: PageProps<"/[locale]/re
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl">
+        <Link href="/floods" className="text-sm text-link underline">
+          Water and floods
+        </Link>
         <h1 className="text-3xl font-semibold">Reservoirs and lakes</h1>
         <p className="mt-2 max-w-[72ch] text-lg text-ink-soft">
           How much of each of Ghana&apos;s main reservoirs and lakes is under water, measured by radar every few days through cloud and haze: the water

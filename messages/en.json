@@ -21,16 +21,12 @@
     "close": "Close",
     "checkLand": "Check land",
     "districts": "Districts",
-    "floods": "Floods",
-    "power": "Power cuts",
+    "floods": "Water and floods",
     "groupWatch": "Watch",
     "groupAct": "Take action",
     "groupMore": "More",
     "rivers": "Rivers",
-    "reports": "Monthly reports",
-    "air": "Air and heat",
-    "reservoirs": "Reservoirs and lakes",
-    "coast": "Coastline"
+    "reports": "Monthly reports"
   },
   "home": {
     "title": "Ghana's monthly satellite report on its land and rivers",

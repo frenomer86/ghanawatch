@@ -22,6 +22,9 @@ export default async function CoastPage({ params }: PageProps<"/[locale]/coast">
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl">
+        <Link href="/floods" className="text-sm text-link underline">
+          Water and floods
+        </Link>
         <h1 className="text-3xl font-semibold">Coastline</h1>
         <p className="mt-2 max-w-[72ch] text-lg text-ink-soft">
           Where the sea is taking Ghana&apos;s land and where the shore is growing, kilometre by kilometre since 2000, measured from every year of

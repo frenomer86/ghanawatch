@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getFormatter, setRequestLocale } from "next-intl/server";
-import { CloudRain, MapIcon, Radar, Waves } from "lucide-react";
+import { CloudRain, Droplets, MapIcon, Radar, Waves } from "lucide-react";
 import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -13,10 +13,10 @@ import { radarFloods, rainOutlook, rainLevel, RAIN_LEVELS, waterwayEncroachments
 import { listPublicCases } from "@/lib/db/repo/cases";
 import type { Locale } from "@/lib/domain/types";
 
-export const metadata: Metadata = { title: "Floods and waterways" };
+export const metadata: Metadata = { title: "Water and floods" };
 
 /**
- * Floods and waterways for all of Ghana: the next three days of rain in every district, river flood
+ * Water and floods for all of Ghana, the one page for everything about water: reservoirs and lakes, the coast, the next three days of rain in every district, river flood
  * forecasts, land seen under water by radar after a forecast or report, flood-prone land on the map, and
  * flood reports from the public.
  */
@@ -26,10 +26,10 @@ export default async function FloodsPage({ params }: PageProps<"/[locale]/floods
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-semibold">Floods and waterways</h1>
+        <h1 className="text-3xl font-semibold">Water and floods</h1>
         <p className="mt-2 max-w-[70ch] text-lg text-ink-soft">
-          Heavy rain coming in the next three days, rivers forecast to rise, land radar has seen under water, land that has flooded before, and
-          flood reports from the public, for every district of Ghana.
+          Heavy rain coming in the next three days, rivers forecast to rise, land radar has seen under water, how full the reservoirs are, where the
+          sea is taking the coast, and flood reports from the public, for every district of Ghana.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button asChild>
@@ -56,6 +56,22 @@ export default async function FloodsPage({ params }: PageProps<"/[locale]/floods
             </Suspense>
           </div>
           <div className="space-y-8">
+            <nav aria-label="More about water" className="grid gap-3">
+              <Link href="/reservoirs" className="rounded-xl border bg-card p-4 hover:bg-accent/40">
+                <span className="flex items-center gap-2 font-heading text-lg font-semibold">
+                  <Droplets className="size-5 text-sky-700" aria-hidden />
+                  Reservoirs and lakes
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">How full Lake Volta, Bui, Kpong, Weija, Barekese, Owabi and the northern irrigation dams are, from every radar pass.</span>
+              </Link>
+              <Link href="/coast" className="rounded-xl border bg-card p-4 hover:bg-accent/40">
+                <span className="flex items-center gap-2 font-heading text-lg font-semibold">
+                  <Waves className="size-5 text-sky-700" aria-hidden />
+                  Coastline
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">Where the sea is taking the land, kilometre by kilometre since 2000.</span>
+              </Link>
+            </nav>
             <Suspense fallback={<Skeleton className="h-72 w-full" />}>
               <RiverWatch locale={locale} />
             </Suspense>

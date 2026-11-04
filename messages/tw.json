@@ -20,7 +20,6 @@
     "menu": "Menu",
     "close": "To mu",
     "floods": "Nsuyiri",
-    "power": "Dumsɔ",
     "groupWatch": "Hwɛ",
     "groupAct": "Yɛ biribi",
     "groupMore": "Bio",
@@ -28,10 +27,7 @@
     "reports": "Bosome biara amanneɛbɔ",
     "districts": "Mansin ahorow",
     "checkLand": "Hwɛ asase",
-    "admin": "Admin",
-    "air": "Mframa ne ɔhyew",
-    "reservoirs": "Nsuo akorae ne atare",
-    "coast": "Mpoano"
+    "admin": "Admin"
   },
   "home": {
     "title": "Nea ɛresesa wɔ Ghana seesei",

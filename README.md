@@ -32,7 +32,6 @@ Sign in at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_INITIAL_PASSWORD`.
 - `/alerts` the weekly digest (email sign-up, WhatsApp channel, RSS and JSON feeds) and the reverse-chronological feed with type and region filters
 - `/event/{id}` stand-alone record with dates, confidence, source, citation and GeoJSON download
 - `/my-area` device-local watchlist of districts or points
-- `/air` air quality (PM2.5, PM10, Harmattan dust, US AQI from the CAMS forecast) and heat stress (feels-like and wet-bulb temperature) for every district, today and the next three days, with what each level means; also on every district scorecard
 - `/reservoirs` how much of Lake Volta, Bui, Kpong, Weija, Barekese, Owabi, Bosomtwe, Tono, Vea, Dawhenya and the Songor Lagoon is under water at every Sentinel-1 radar pass, inside the largest extent Digital Earth Africa has mapped for each
 - `/coast` coastline change every kilometre since 2000 (Digital Earth Africa Coastlines): where the sea is advancing fastest and where the shore is growing
 - `/report` ground report (photo, location, text), queued offline, checked automatically against the photo's own GPS position and time, GhanaWatch's satellite, fire, flood and rain records and other people's reports, with faces blurred and contact details removed (`docs/report-automation.md`)

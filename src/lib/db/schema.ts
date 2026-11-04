@@ -392,31 +392,6 @@ export const alerts = pgTable(
   ],
 );
 
-/**
- * Power-cut tracker: anonymous "lights off" and "lights back" reports. Locations are rounded to about
- * 300 m before they are stored; the caller's network address is kept only as a salted hash, to stop one
- * person reporting the same thing over and over. No account, no name, no photo.
- */
-export const powerReports = pgTable(
-  "power_reports",
-  {
-    id: uuid("id").primaryKey(),
-    kind: text("kind").notNull(), // off | on
-    lat: numeric("lat", { precision: 8, scale: 4, mode: "number" }).notNull(),
-    lon: numeric("lon", { precision: 8, scale: 4, mode: "number" }).notNull(),
-    districtId: uuid("district_id").references(() => adminBoundaries.id, { onDelete: "set null" }),
-    happenedAt: timestamp("happened_at", { withTimezone: true }).notNull(),
-    ipHash: text("ip_hash").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    index("power_reports_time_idx").on(t.happenedAt),
-    index("power_reports_district_idx").on(t.districtId, t.happenedAt),
-    check("power_reports_kind_ck", sql`kind in ('off', 'on')`),
-    check("power_reports_in_ghana_ck", sql`lon between -3.4 and 1.3 and lat between 4.6 and 11.3`),
-  ],
-);
-
 export const communityReports = pgTable(
   "community_reports",
   {
@@ -680,34 +655,6 @@ export const districtRain = pgTable(
     computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.districtId, t.day] })],
-);
-
-/**
- * Air quality and heat for every district and day (src/lib/domain/air-heat.ts): CAMS forecasts of fine
- * particles, coarse particles and Saharan dust with the US AQI, and the day's highest temperature, feels-like
- * temperature and wet-bulb temperature, all from Open-Meteo at the district centre. Past days are kept as a
- * record; future days are replaced by each new forecast.
- */
-export const districtAirHeat = pgTable(
-  "district_air_heat",
-  {
-    districtId: uuid("district_id")
-      .notNull()
-      .references(() => adminBoundaries.id, { onDelete: "cascade" }),
-    day: date("day", { mode: "string" }).notNull(),
-    /** 24-hour mean PM2.5 and PM10, µg/m³. */
-    pm25: real("pm25"),
-    pm10: real("pm10"),
-    /** Highest hourly dust concentration, µg/m³. */
-    dust: real("dust"),
-    /** Highest hourly US Air Quality Index. */
-    aqi: integer("aqi"),
-    tempMaxC: real("temp_max_c"),
-    feelsLikeMaxC: real("feels_like_max_c"),
-    wetBulbMaxC: real("wet_bulb_max_c"),
-    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.districtId, t.day] }), index("district_air_heat_day_idx").on(t.day)],
 );
 
 /**

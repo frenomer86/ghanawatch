@@ -8,8 +8,6 @@ import { resolveLocale } from "@/i18n/locale";
 import { Link } from "@/i18n/navigation";
 import { districtBySlug } from "@/lib/db/repo/scorecards";
 import { districtRainOutlook, RAIN_LEVELS } from "@/lib/db/repo/floods";
-import { districtAirHeat } from "@/lib/db/repo/air-heat";
-import { AQI_TEXT, HEAT_TEXT } from "@/lib/domain/air-heat";
 import { shareOfArea } from "@/lib/domain/scorecards";
 import { districtSeries, latestClosedMonth, releaseFor } from "@/lib/server/index/read";
 import { listIntakes, nearestIntake } from "@/lib/server/index/intakes";
@@ -72,9 +70,7 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
   const d = await districtBySlug(slug);
   if (!d) notFound();
   const c = d.card;
-  const [rain, series, intakes, airHeat] = await Promise.all([districtRainOutlook(c.id), districtSeries(c.id), listIntakes(), districtAirHeat(c.id)]);
-  const airToday = airHeat?.days[0] ?? null;
-  const worstAirDay = airHeat?.days.reduce<(typeof airHeat.days)[number] | null>((w, d) => (d.aqi != null && (w?.aqi == null || d.aqi > w.aqi) ? d : w), null) ?? null;
+  const [rain, series, intakes] = await Promise.all([districtRainOutlook(c.id), districtSeries(c.id), listIntakes()]);
   const latestMonth = series.at(-1) ?? null;
   const released = latestMonth ? await releaseFor(latestMonth.month) : null;
   const origin = env().PUBLIC_ORIGIN;
@@ -157,22 +153,6 @@ async function Scorecard({ params }: { params: PageProps<"/[locale]/districts/[s
           label="Rain, next 3 days"
           value={rain ? `${Math.round(rain.maxMm)} mm` : "–"}
           sub={`heaviest day${rain && rain.maxMm >= RAIN_LEVELS.heavy ? " (heavy rain)" : ""}${c.floodAlerts ? ` · ${c.floodAlerts} river points above flood level` : ""}`}
-        />
-        <Stat
-          tone={airToday?.aqi != null && airToday.aqi > 100 ? "alert" : undefined}
-          label="Air quality today"
-          value={airToday?.aqi != null ? `AQI ${airToday.aqi}` : "–"}
-          sub={
-            airToday?.aqiLevel
-              ? `${AQI_TEXT[airToday.aqiLevel].label.toLowerCase()}${airToday.dust != null && airToday.dust >= 100 ? ", Harmattan dust" : ""}${worstAirDay && worstAirDay.day !== airToday.day && (worstAirDay.aqi ?? 0) > (airToday.aqi ?? 0) ? `; up to ${worstAirDay.aqi} in the next days` : ""}`
-              : "forecast not loaded yet"
-          }
-        />
-        <Stat
-          tone={airToday?.heatLevel === "danger" || airToday?.heatLevel === "extremeDanger" ? "alert" : undefined}
-          label="Heat today"
-          value={airToday?.feelsLikeMaxC != null ? `${Math.round(airToday.feelsLikeMaxC)} °C` : "–"}
-          sub={airToday?.heatLevel ? `feels like at the hottest hour; ${HEAT_TEXT[airToday.heatLevel].label.toLowerCase()}` : "forecast not loaded yet"}
         />
         <Stat label="Reports from the public" value={String(c.reports)} sub={c.reports ? `${c.reportsConfirmed} confirmed by satellite` : "none approved yet"} />
       </dl>
